@@ -1,21 +1,35 @@
-#SFTP 
+#SFTP conn
+import pysftp
+import json
+cnopts = pysftp.CnOpts()
+cnopts.hostkeys = None
 
-# # Use
-# cnopts = pysftp.CnOpts()
-# cnopts.hostkeys = None
 
+with open('powerschool-420113-b0750ef59b13.json') as json_file:
+    j = json.load(json_file) 
+    sftp_pass = j['sftp_password']
 
-# #Get Data from PS Data Export Manager SFTP folder, and move to BigQuery
-# with pysftp.Connection(
-#     host="ps.com",
-#     username="greendot",
-#     password="*********",
-#     cnopts=cnopts
-# ) as sftp:
-#     # Download a remote file to the local machine
-#     remote_file = "/greendottn/custom_report_standards_2024"
-#     local_file = "local_file.csv"   (This can be dynamic if we want to preserve the file everytime)
-#     sftp.get(remote_file, local_file)
+#Get Data from PS Data Export Manager SFTP folder, and move to BigQuery
+with pysftp.Connection(
+    host="sftp.iotaschools.org",
+    username="iota.sftp",
+    password=sftp_pass,
+    cnopts=cnopts
+) as sftp:
+    
+    directory_contents = sftp.listdir()
+    current_directory = sftp.pwd
+    print("Current directory:", current_directory)
+    print('Dir contents: ', directory_contents)
+
+    # Download a remote file to the local machine
+    # remote_directory = "/greendottn/custom_report_standards_2024"
+    # for item in directory_contents:
+        # print(item)
+
+    local_file = "local_file.txt"   #(This can be dynamic if we want to preserve the file everytime)
+    sftp.get('Test!.txt', local_file)
+    sftp.close()
 
 # ----------------------------------------------------------
 
