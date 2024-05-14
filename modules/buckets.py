@@ -100,7 +100,7 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location):
     except NotFound:
         print(f'Table {table_id} has been created, and data has been sent')
 
-    pandas_gbq.to_gbq(df, table_id, project_id='greendotdataflow', if_exists='replace', location=location)
+    pandas_gbq.to_gbq(df, table_id, project_id, if_exists='replace', location=location)
 
 
 
