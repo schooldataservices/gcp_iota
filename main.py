@@ -1,127 +1,90 @@
-#SFTP conn
+# --------------------------SFTP conn to retrieve files---------------------
+import json 
 import pysftp
-import json
-cnopts = pysftp.CnOpts()
-cnopts.hostkeys = None
-
-
-with open('powerschool-420113-b0750ef59b13.json') as json_file:
-    j = json.load(json_file) 
-    sftp_pass = j['sftp_password']
-
-#Get Data from PS Data Export Manager SFTP folder, and move to BigQuery
-with pysftp.Connection(
-    host="sftp.iotaschools.org",
-    username="iota.sftp",
-    password=sftp_pass,
-    cnopts=cnopts
-) as sftp:
-    
-    directory_contents = sftp.listdir()
-    current_directory = sftp.pwd
-    print("Current directory:", current_directory)
-    print('Dir contents: ', directory_contents)
-
-    # Download a remote file to the local machine
-    # remote_directory = "/greendottn/custom_report_standards_2024"
-    # for item in directory_contents:
-        # print(item)
-
-    local_file = "local_file.txt"   #(This can be dynamic if we want to preserve the file everytime)
-    sftp.get('Test!.txt', local_file)
-    sftp.close()
-
-# ----------------------------------------------------------
-
-from modules.buckets import create_bucket, upload_to_bucket, download_from_bucket, upload_to_bq_table
 import os
 import pandas_gbq
 import pandas as pd
+from modules.buckets import *
+import logging
+
+#Configure loggging
+logging.basicConfig(filename='BigQuery.log', level=logging.INFO,
+                   format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+logging.info('\n\n-------------New Big Query Logging Instance')
+cnopts = pysftp.CnOpts()
+cnopts.hostkeys = None
+
+# Set the GOOGLE_APPLICATION_CREDENTIALS environment variable in order to interact, import the SFTP password from the same file
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'powerschool-420113-db919282054b.json'
+with open('powerschool-420113-db919282054b.json') as json_file:
+    j = json.load(json_file) 
+    sftp_pass = j['sftp_password']
 
 
-# Set the GOOGLE_APPLICATION_CREDENTIALS environment variable in order to interact
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'greendotdataflow-848329b50f47.json'
+#Get Data from PS Data Export Manager, to SFTP folder, and move to Bucket & then BigQuery
+try:
 
-
-
-class Create:
-
-    def __init__(self, bucket, end_file_name, local_file_name, project_id, db, table_name, SQL_query, location=None):
+    with pysftp.Connection(
+        host="sftp.iotaschools.org",
+        username="iota.sftp",
+        password=sftp_pass,
+        cnopts=cnopts
+    ) as sftp:
         
-        self.location = location
-        self.bucket = bucket
-        self.end_file_name = end_file_name
-        self.local_file_name = local_file_name
-        self.project_id = project_id
-        self.db = db
-        self.table_name = table_name
-        self.SQL_query = SQL_query
+        logging.info('SFTP connection established succesfully')
+        
+        directory_contents = sftp.listdir()
+        current_directory = sftp.pwd
+        print("Current directory:", current_directory)
+        print('Dir contents: ', directory_contents)
 
+        # Download a remote file to the local machine
+        # remote_directory = "/greendottn/custom_report_standards_2024"
+        # for item in directory_contents:
+            # print(item)
 
-    def process(self):
-    
-        #Create the bucket, and upload to that bucket. If already created, bypass
-        create_bucket(self.bucket, self.location)
+        # local_file = "local_file.txt"   #(This can be dynamic if we want to preserve the file everytime)
+        # sftp.get('Test!.txt', local_file) #take file in SFTP and name it to local_file name
+        # sftp.close()
+except:
+    logging.info('Failed to establish SFTP connection')
 
-        #Upload file to bucket, demonstrates if overwritten or newfile. 
-        #End File Name,  Local File Path, Bucket Name
-        upload_to_bucket(self.end_file_name , self.local_file_name, self.bucket)
+# ----------------------------------------------------------
 
-
-        upload_to_bq_table(cloud_storage_uri = f'gs://{self.bucket}/{self.end_file_name}',
-                        project_id = self.project_id,
-                        db = self.db,
-                        table_name = self.table_name,
-                        location = self.location)
-
-        try:
-            print('Running query')
-            query = pandas_gbq.read_gbq(self.SQL_query, project_id=self.project_id, location=self.location)
-            print('Query completed')
-        except:
-            print('Unable to run query')
-
-
-        return(query)
-
-
-
-
-
-already_created_update = Create(location = 'us-south1',
-                                bucket='psholdingbucket7',
-                                end_file_name = 'students.csv',
-                                local_file_name = 'Student_Records.csv',
-                                project_id='greendotdataflow',
-                                db = 'Students',
-                                table_name = 'Student_Records_7',
-
-                                SQL_query='''
-
-                                SELECT * FROM greendotdataflow.Students.Student_Records_7
-
-                                '''  
-                    )
-
-brand_new_creation = Create(location = 'us-south1',
-                            bucket='psholdingbucket12',
-                            end_file_name = 'students.csv',
+ps_students_file_1 = Create(location = 'us-south1',
+                            bucket='powerschoolbucket-iotaschools-1',
                             local_file_name = 'Student_Records.csv',
-                            project_id='greendotdataflow',
-                            db = 'Students',
-                            table_name = 'Student_Records_12',
+                            end_file_name = 'students.csv',
+                            project_id='powerschool-420113',
+                            db = 'students',
+                            table_name = 'ps_students',
+                            append_or_replace='replace',
 
-                            SQL_query='''
+                            sql_query=f'''
 
-                            SELECT * FROM greendotdataflow.Students.Student_Records_12
+                            SELECT * FROM powerschool-420113.students.ps_students
 
-                            '''  
+                                    '''  
+                             )
+
+
+ps_students_file_2 = Create(location = 'us-south1',
+                            bucket='powerschoolbucket-iotaschools-1',
+                            local_file_name = 'Student_Records.csv',
+                            end_file_name = 'students_2.csv',
+                            project_id='powerschool-420113',
+                            db = 'students',
+                            table_name = 'ps_students_2',
+                            append_or_replace = 'append',
+
+                            sql_query='''
+
+                             SELECT * FROM powerschool-420113.students.ps_students_2
+
+                             '''  
                     )
 
-
-query_one = already_created_update.process()
-
-query_two = brand_new_creation.process()
-
+query_one = ps_students_file_1.process()
+query_two = ps_students_file_2.process()
 
 #-------------Next step put file in clevers SFTP--------------

@@ -21,6 +21,7 @@ This project demonstrates a data pipeline automation process using Python. It co
      - Upload the downloaded file to the GCS bucket.
      - Load the data from the GCS bucket into a BigQuery table.
      - Execute a SQL query on the BigQuery table for data analysis.
+     - Refer to log file created for more in depth step by step of the process.
 
 4. **Customization**:
    - Modify the `Create` class attributes to fit your specific data pipeline requirements.
@@ -36,4 +37,4 @@ This project demonstrates a data pipeline automation process using Python. It co
 
 ### Notes
 - Ensure that the SFTP server, Google Cloud Storage, and BigQuery environments are properly configured with the necessary permissions and access credentials.
-- This script serves as a basic example and may require additional error handling, logging, and security enhancements for production use.
+- Ensure that the service account associated with the connection has proper IAM credentials to interact with GCS and Big Query. 

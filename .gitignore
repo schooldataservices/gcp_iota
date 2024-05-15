@@ -3,3 +3,5 @@ debug.py
 *.json
 *.zip
 local_file.txt
+*.log
+*.pyc
