@@ -5,6 +5,7 @@ from google.cloud import bigquery
 import pandas as pd
 import pandas_gbq
 import logging
+from .reproducibility import *
 
 
 
@@ -35,6 +36,7 @@ def create_bucket(bucket_name, location, storage_class = 'STANDARD'):
 #bucket name is GC bucket unique bucket name
 
 def upload_to_bucket(destination_blob_name, local_file, bucket_name):
+
     # Initialize a Google Cloud Storage client
     storage_client = storage.Client()
 
@@ -62,6 +64,125 @@ def upload_to_bucket(destination_blob_name, local_file, bucket_name):
         logging.info(f'Error uploading {local_file} to the {bucket_name} due to {e}')
 
 
+def upload_all_files_to_bucket(local_dir, bucket_name):
+
+    for filename in os.listdir(local_dir):
+        if os.path.isfile(os.path.join(local_dir, filename)):  
+            upload_to_bucket(filename, os.path.join(local_dir, filename), bucket_name)
+
+
+
+
+def list_files_in_bucket(bucket_name):
+
+    # Initialize a Google Cloud Storage client
+    storage_client = storage.Client()
+
+    # Get the bucket
+    bucket = storage_client.get_bucket(bucket_name)
+
+    # List all blobs (files) in the bucket
+    blobs = bucket.list_blobs()
+
+    # Iterate over each blob and print its name
+    file_names = [blob.name for blob in blobs]
+    
+    return(file_names)
+
+
+
+
+
+
+
+#Upload to BiqQuery using Pandas_GBQ. 
+#Schema is created based on pandas dtypes. 
+        
+def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, append_or_replace):
+
+  
+    # Read the CSV file from Cloud Storage into a Pandas DataFrame
+    try:
+        df = read_file(cloud_storage_uri)
+        df = pre_processing(df)
+     
+    except pd.errors.ParserError as e:
+
+        logging.info(f'Unable to read {cloud_storage_uri} due to the following: \n {e}')
+
+    logging.info(f'Here is the cloud uri that was read {cloud_storage_uri}')
+
+    client = bigquery.Client()
+
+    # project, DB, table name
+    table_id = f'{project_id}.{db}.{table_name}'
+
+    try:
+        client.get_table(table_id)
+        print(f'Table {table_id} already exists, argument is being called to {append_or_replace.upper()} new data with incoming data')
+        logging.info(f'Table {table_id} already exists, argument is being called to {append_or_replace.upper()} new data with incoming data')
+   
+    except NotFound:
+        print(f'Table {table_id} has been created, and data has been sent for the first time')
+        logging.info(f'Table {table_id} has been created, and data has been sent for the first time')
+
+    pandas_gbq.to_gbq(df, table_id, project_id, if_exists=append_or_replace, location=location)
+
+
+
+
+
+
+   
+class Create:
+
+    def __init__(self, bucket, local_dir, project_id, db, table_name, append_or_replace, location=None):
+        
+        self.location = location
+        self.bucket = bucket
+        self.local_dir = local_dir
+        self.project_id = project_id
+        self.db = db
+        self.table_name = table_name
+        self.append_or_replace = append_or_replace
+
+
+    def process(self):
+
+        logging.info('New file processing started\n')
+    
+        #Create the bucket, and upload to that bucket. If already created, bypass
+        create_bucket(self.bucket, self.location)
+
+        #Upload all files to bucket based on self.local_dir, demonstrates if overwritten or newfile for all files in logging
+        upload_all_files_to_bucket(self.local_dir, self.bucket)
+
+        #Get file_names to upload to BQ as their table name
+        file_names = list_files_in_bucket(self.bucket)
+        file_names_without_extension = [remove_extension_from_file(file_name) for file_name in file_names]
+    
+
+        for file_name, table_name in zip(file_names, file_names_without_extension):
+            logging.info(f'Attempting to upload {file_name} into the table {table_name}')
+            upload_to_bq_table(
+                cloud_storage_uri=f'gs://{self.bucket}/{file_name}',
+                project_id=self.project_id,
+                db=self.db,
+                table_name=table_name,
+                location=self.location,
+                append_or_replace=self.append_or_replace
+            )
+
+                
+         
+            
+
+
+
+
+
+
+
 
 
 
@@ -87,90 +208,20 @@ def download_from_bucket(source_blob_name, destination_file_path, bucket_name):
 
 
 
-#Upload to BiqQuery using Pandas_GBQ. 
-#Schema is created based on pandas dtypes. 
-        
-def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, append_or_replace):
 
-  
-    # project, DB, table name
-    table_id = f'{project_id}.{db}.{table_name}'
+        # #Could implement sql query here if did not want to be in class instance
 
-    # Read the CSV file from Cloud Storage into a Pandas DataFrame
-    df = pd.read_csv(cloud_storage_uri)
+        # try:
+        #     logging.info(f'Calling SQL query on {self.project_id}.{self.db}.{self.table_name}')
+        #     print(f'Calling SQL query on {self.project_id}.{self.db}.{self.table_name}')
 
-    client = bigquery.Client()
+        #     query = pandas_gbq.read_gbq(self.sql_query, project_id=self.project_id, location=self.location)
 
-    try:
-        client.get_table(table_id)
-        print(f'Table {table_id} already exists, argument is being called to {append_or_replace.upper()} new data with incoming data')
-        logging.info(f'Table {table_id} already exists, argument is being called to {append_or_replace.upper()} new data with incoming data')
-   
-    except NotFound:
-        print(f'Table {table_id} has been created, and data has been sent for the first time')
-        logging.info(f'Table {table_id} has been created, and data has been sent for the first time')
+        #     logging.info('SQL Query completed')
+        #     print('SQL Query completed')
 
-    pandas_gbq.to_gbq(df, table_id, project_id, if_exists=append_or_replace, location=location)
+        # except Exception as e:
+        #     print(f'Unable to run query on {self.project_id}.{self.db}.{self.table_name} due to {e}')
+        #     logging.info(f'Unable to run query on {self.project_id}.{self.db}.{self.table_name} due to {e}')
 
-
-
-
-   
-
-
-class Create:
-
-    def __init__(self, bucket, end_file_name, local_file_name, project_id, db, table_name, sql_query, append_or_replace, location=None):
-        
-        self.location = location
-        self.bucket = bucket
-        self.end_file_name = end_file_name
-        self.local_file_name = local_file_name
-        self.project_id = project_id
-        self.db = db
-        self.table_name = table_name
-        self.sql_query = sql_query
-        self.append_or_replace = append_or_replace
-
-
-    def process(self):
-
-        logging.info('New file processing started\n')
-    
-        #Create the bucket, and upload to that bucket. If already created, bypass
-        create_bucket(self.bucket, self.location)
-
-        #Upload file to bucket, demonstrates if overwritten or newfile. 
-        #End File Name,  Local File Path, Bucket Name
-        upload_to_bucket(self.end_file_name , self.local_file_name, self.bucket)
-
-
-        upload_to_bq_table(cloud_storage_uri = f'gs://{self.bucket}/{self.end_file_name}',
-                            project_id = self.project_id,
-                            db = self.db,
-                            table_name = self.table_name,
-                            location = self.location,
-                            append_or_replace = self.append_or_replace)
-        
-        #Could implement sql query here if did not want to be in class instance
-
-        try:
-            logging.info(f'Calling SQL query on {self.project_id}.{self.db}.{self.table_name}')
-            print(f'Calling SQL query on {self.project_id}.{self.db}.{self.table_name}')
-
-            query = pandas_gbq.read_gbq(self.sql_query, project_id=self.project_id, location=self.location)
-
-            logging.info('SQL Query completed')
-            print('SQL Query completed')
-
-        except Exception as e:
-            print(f'Unable to run query on {self.project_id}.{self.db}.{self.table_name} due to {e}')
-            logging.info(f'Unable to run query on {self.project_id}.{self.db}.{self.table_name} due to {e}')
-
-        return(query)
-
-
-
-
-
-
+        # return(query)
