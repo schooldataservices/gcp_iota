@@ -5,3 +5,4 @@ debug.py
 local_file.txt
 *.log
 *.pyc
+SFTP_folders
