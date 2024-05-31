@@ -38,3 +38,17 @@ This project demonstrates a data pipeline automation process using Python. It co
 ### Notes
 - Ensure that the SFTP server, Google Cloud Storage, and BigQuery environments are properly configured with the necessary permissions and access credentials.
 - Ensure that the service account associated with the connection has proper IAM credentials to interact with GCS and Big Query. 
+
+### Potential Concerns and Improvements
+
+
+-ORGANIZATION
+-Figure out writing to the SFTP for EIS scrape, and then start getting folders nested. 
+
+-PRE-PROCESSING
+-Potential with headers issues
+
+-DATA TYPES
+-Create more complex pre-processing modules to maintain the dtypes
+-Potential data type issues, doing calculations on column data when they are coming across as strings.
+
