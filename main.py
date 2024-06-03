@@ -22,18 +22,21 @@ with open('powerschool-420113-db919282054b.json') as json_file:
 #Need to make this portion to where it assesses all files in the dir recursively. 
 def main(SFTP_folder_name):
 
+    SFTP_folder_name  = initial_schema_check(SFTP_folder_name)
+    print(SFTP_folder_name)
+
     instance = Create(
                 project_id='powerschool-420113',
                 location = 'us-south1',
                 bucket=f'{SFTP_folder_name}bucket-iotaschools-1',
                 local_dir = f'SFTP_folders\\{SFTP_folder_name}',
                 db = SFTP_folder_name,
-                table_name = 'ps_students',
                 append_or_replace='replace',
                 )
 
     SFTP_conn(sftp_pass, SFTP_folder_name) #Replicate SFTP folder onto local dir
     instance.process()#Replicate local dir into Buckets, pass dir filesinto Bucket & finally into Big Query tables
 
-
+main('EIS')
 main('powerschool')
+

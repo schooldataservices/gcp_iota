@@ -10,7 +10,11 @@ from .reproducibility import *
 
 
 
-def create_bucket(bucket_name, location, storage_class = 'STANDARD'):
+def create_bucket(bucket_name, location, local_dir, storage_class = 'STANDARD'):
+
+    #make sure bucket_name and folder_name comply with GCS schema
+    initial_schema_check(local_dir)
+
 
     storage_client = storage.Client()
 
@@ -24,6 +28,8 @@ def create_bucket(bucket_name, location, storage_class = 'STANDARD'):
         # Bucket not found, create a new one with storage_class arg and location
         bucket = storage_client.bucket(bucket_name)
         bucket.storage_class = storage_class
+
+        print(location)
 
         bucket = storage_client.create_bucket(bucket, location)
         print(f'\n\nBucket {bucket_name} created in {location} with {storage} storage class.')
@@ -103,12 +109,20 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, 
   
     # Read the CSV file from Cloud Storage into a Pandas DataFrame
     try:
-        df = read_file(cloud_storage_uri)
+        df = read_file(cloud_storage_uri) #here is where the error is occuring 'gs://eisbucket-iotaschools-1/EIS_prior_schools.csv'
         df = pre_processing(df)
-     
-    except pd.errors.ParserError as e:
+        
 
-        logging.info(f'Unable to read {cloud_storage_uri} due to the following: \n {e}')
+    except pd.errors.ParserError as e:
+        logging.error(f'Unable to read {cloud_storage_uri} due to parsing error: \n {e}')
+      
+
+    except pd.errors.EmptyDataError as e:
+        logging.error(f'Unable to read {cloud_storage_uri} due to empty data: \n {e}')
+        
+    except Exception as e:
+        logging.error(f'Here is the error after reading in cloud storage uri : \n {e}')
+
 
     logging.info(f'Here is the cloud uri that was read {cloud_storage_uri}')
 
@@ -123,10 +137,14 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, 
         logging.info(f'Table {table_id} already exists, argument is being called to {append_or_replace.upper()} new data with incoming data')
    
     except NotFound:
-        print(f'Table {table_id} has been created, and data has been sent for the first time')
-        logging.info(f'Table {table_id} has been created, and data has been sent for the first time')
+        print(f'Attempting to create table {table_id} and send data for the first time')
+        logging.info(f'Attempting to create table {table_id} and send data for the first time')
 
-    pandas_gbq.to_gbq(df, table_id, project_id, if_exists=append_or_replace, location=location)
+    try:
+        pandas_gbq.to_gbq(df, table_id, project_id, if_exists=append_or_replace, location=location)
+        logging.info(f'Succesfully created table {table_id} and sent data')
+    except Exception as e:
+        logging.info(f'Unable to create table {table_id} due to error- {e}')
 
 
 
@@ -136,14 +154,13 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, 
    
 class Create:
 
-    def __init__(self, bucket, local_dir, project_id, db, table_name, append_or_replace, location=None):
+    def __init__(self, bucket, local_dir, project_id, db, append_or_replace, location=None):
         
         self.location = location
         self.bucket = bucket
         self.local_dir = local_dir
         self.project_id = project_id
         self.db = db
-        self.table_name = table_name
         self.append_or_replace = append_or_replace
 
 
@@ -152,15 +169,20 @@ class Create:
         logging.info('New file processing started\n')
     
         #Create the bucket, and upload to that bucket. If already created, bypass
-        create_bucket(self.bucket, self.location)
-
+        create_bucket(self.bucket, self.location, self.local_dir)
+  
         #Upload all files to bucket based on self.local_dir, demonstrates if overwritten or newfile for all files in logging
         upload_all_files_to_bucket(self.local_dir, self.bucket)
 
+        print(self.bucket)
+
         #Get file_names to upload to BQ as their table name
         file_names = list_files_in_bucket(self.bucket)
+        #shows ['EIS_prior_schools.csv'] here
         file_names_without_extension = [remove_extension_from_file(file_name) for file_name in file_names]
-    
+
+        
+        
 
         for file_name, table_name in zip(file_names, file_names_without_extension):
             logging.info(f'Attempting to upload {file_name} into the table {table_name}')
@@ -173,7 +195,7 @@ class Create:
                 append_or_replace=self.append_or_replace
             )
 
-                
+# 'EIS_prior_schoolsbucket-iotaschools-1' this is the bucket at some point not sure why under global variables
          
             
 

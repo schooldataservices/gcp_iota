@@ -30,10 +30,11 @@ def read_file(file_path):
 
 # --------------------------------------------------
 
-
 def SFTP_conn(sftp_pass, folder_name):
-    sftp = None  # Initialize sftp outside the try block
     
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None  # Disable host key checking
+    sftp = None
     try:
         sftp = pysftp.Connection(
             host="sftp.iotaschools.org",
@@ -45,33 +46,42 @@ def SFTP_conn(sftp_pass, folder_name):
         logging.info('SFTP connection established successfully')
 
         # Set local directory to save SFTP files to computer
-        local_directory = f'SFTP_folders/{folder_name}'
+        local_directory = os.path.join('SFTP_folders', folder_name)
         os.makedirs(local_directory, exist_ok=True)  # Create local directory if it doesn't exist
         
         # Change to the remote directory
         sftp.chdir(folder_name)
         
-        print('Dir contents: ', sftp.listdir())
-        logging.info(f'Dir contents of {folder_name} are the following: {sftp.listdir()} ')
-        
-        # Download the entire remote folder recursively and place on local directory
-        sftp.get_r('.', local_directory)
+        dir_contents = sftp.listdir()
+        logging.info(f'Dir contents of {folder_name}: {dir_contents}')
 
-        logging.info(f'Folder "{folder_name}" replicated to local directory "{local_directory}"')
+
+        for file_name in dir_contents:
+            remote_file_path = os.path.join(folder_name, file_name)
+            local_file_path = os.path.join(local_directory, file_name)
+            
+            # Log the paths to ensure they are correct
+            logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+            print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+            
+            sftp.get(file_name, local_file_path)
+            logging.info(f'File "{file_name}" downloaded to local directory "{local_directory}"')
+
+        logging.info(f'All files in folder "{folder_name}" downloaded to local directory "{local_directory}"')
+
         
     except pysftp.ConnectionException as ce:
         logging.error(f'Failed to establish SFTP connection: {ce}')
     except pysftp.AuthenticationException as ae:
         logging.error(f'Authentication error during SFTP connection: {ae}')
-    except socket.timeout as te:
-        logging.error(f'Timeout occurred during SFTP connection: {te}')
     except Exception as e:
         logging.error(f'An error occurred during SFTP operation: {e}')
-
     finally:
         if sftp:
-            sftp.close()  # Close the connection if it was successfully opened
-            logging.info('SFTP conn closed')
+            pass
+            # sftp.close()  # Close the connection if it was successfully opened
+            logging.info('SFTP connection close passed')
+
 
 
 
@@ -84,6 +94,21 @@ def pre_processing(df):
         df.columns = [col.replace('.', '_') for col in df.columns]
 
         return(df)
+
+# ----------------------------------------------------
+#Bucket names must contain only lowercase letters, numbers, hyphens (-), and cannot start or end with a hyphen
+
+#Alter the SFTP folder name variable within the main func
+#Rename the local dir to be the same convention
+#Assume the SFTP_folder_name variable
+
+def initial_schema_check(SFTP_folder_name):
+
+    SFTP_folder_name = SFTP_folder_name.lower()
+    SFTP_folder_name = SFTP_folder_name.replace('_', '-')
+
+    return(SFTP_folder_name)
+
 
 # ---------------------------------------------------------
 
