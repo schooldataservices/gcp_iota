@@ -3,7 +3,7 @@
 ### Overview
 This project demonstrates a data pipeline automation process using Python. It transfers the contents of the SFTP, & uploads it to Google Cloud Storage (GCS) buckets. Lastly it then loads the data into BigQuery for database storage. 
 
-The general flow and population works the same across for all instances. The requested SFTP folder & all of its files within are on the remote server, then the folder is replicated onto a Google Cloud Bucket. Then a database is created based on the name of the initial folder, and all files in the bucket are iterated through to create the tables. 
+The general flow and population works the same across for all instances. The requested SFTP folder & all of its files within are on the remote server. The folder and all of its contents are replicated onto a Google Cloud Bucket. Then a database is created based on the name of the initial SFTP folder, and all files in the bucket are iterated through to create the tables. 
 
 The name of the bucket will assume the first portion of the SFTP folder name. The name of the local directory created will also be the name of the SFTP folder nested within the 'SFTP_folders' directory. 
 Class instances are created based on the name of the SFTP folder. Example shown below:
@@ -17,6 +17,9 @@ instance = Create(
                db = SFTP_folder_name,
                append_or_replace='replace',
                )
+
+main("powerschool")
+main("EIS")
 ```
 
 ### Installation
