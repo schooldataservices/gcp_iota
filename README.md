@@ -1,14 +1,14 @@
 ## README: Data Pipeline Automation
 
 ### Overview
-This project demonstrates a data pipeline automation process using Python. It connects to a remote server via SFTP, downloads a folder with all of its contents, uploads it to Google Cloud Storage (GCS), and then loads the data into BigQuery for database storage. 
+This project demonstrates a data pipeline automation process using Python. It transfers the contents of the SFTP, & uploads it to Google Cloud Storage (GCS) buckets. Lastly it then loads the data into BigQuery for database storage. 
 
-The general flow and population works the same across for all instances. The requested SFTP folder & all of its files within it are replicated on the local server, then the folder is taken from the local server, and replicated onto a Google Cloud Bucket. Then a database is created based on the name of the initial folder, and all files in the bucket are iterated through to create the tables. 
-
-Class instances are created based on the name of the SFTP folder. Example shown below:
+The general flow and population works the same across for all instances. The requested SFTP folder & all of its files within are on the remote server, then the folder is replicated onto a Google Cloud Bucket. Then a database is created based on the name of the initial folder, and all files in the bucket are iterated through to create the tables. 
 
 The name of the bucket will assume the first portion of the SFTP folder name. The name of the local directory created will also be the name of the SFTP folder nested within the 'SFTP_folders' directory. 
+Class instances are created based on the name of the SFTP folder. Example shown below:
 
+```python
 instance = Create(
                project_id='powerschool-420113',
                location = 'us-south1',
@@ -17,7 +17,7 @@ instance = Create(
                db = SFTP_folder_name,
                append_or_replace='replace',
                )
-
+```
 
 ### Installation
 1. Clone the repository to your local machine.
@@ -55,10 +55,9 @@ instance = Create(
 - Ensure that the SFTP server, Google Cloud Storage, and BigQuery environments are properly configured with the necessary permissions and access credentials.
 - Ensure that the service account associated with the connection has proper IAM credentials to interact with GCS and Big Query. 
 
-### Potential Concerns and Improvements
+### Potential Concerns and Improvements with pre-processing
 
--PRE-PROCESSING
--Potential with headers issues
--Create more complex pre-processing modules to maintain the dtypes
--Potential data type issues, doing calculations on column data when they are coming across as strings.
+- Potential with headers issues if file read in is not header=0
+- More complex pre-processing modules could be created to maintain the dtypes
+- Potential data type issues, doing calculations on column data when they are coming across as strings.
 
