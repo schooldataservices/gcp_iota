@@ -73,8 +73,8 @@ def upload_to_bucket(destination_blob_name, local_file, bucket_name):
 def upload_all_files_to_bucket(local_dir, bucket_name):
 
     for filename in os.listdir(local_dir):
-        if os.path.isfile(os.path.join(local_dir, filename)):  
-            upload_to_bucket(filename, os.path.join(local_dir, filename), bucket_name)
+        if os.path.isfile(os.path.join(filename)):  
+            upload_to_bucket(filename, os.path.join(filename), bucket_name)
 
 
 
