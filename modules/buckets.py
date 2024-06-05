@@ -54,8 +54,8 @@ def upload_to_bucket(destination_blob_name, local_file, bucket_name):
         existing_blob = bucket.get_blob(destination_blob_name)
         existing_updated_time = existing_blob.updated if existing_blob else None
 
-        # Upload the file
-        blob.upload_from_filename(os.getcwd() + f'\\{local_file}')
+        # Upload the local file
+        blob.upload_from_filename(local_file)
 
         # Check if the file was overwritten based on blob names
         if existing_blob and existing_blob.name == destination_blob_name:
@@ -70,12 +70,14 @@ def upload_to_bucket(destination_blob_name, local_file, bucket_name):
         logging.info(f'Error uploading {local_file} to the {bucket_name} due to {e}')
 
 
+
 def upload_all_files_to_bucket(local_dir, bucket_name):
-
     for filename in os.listdir(local_dir):
-        if os.path.isfile(os.path.join(filename)):  
-            upload_to_bucket(filename, os.path.join(filename), bucket_name)
-
+        local_file_path = os.path.join(local_dir, filename)
+        if os.path.isfile(local_file_path):
+            upload_to_bucket(filename, local_file_path, bucket_name)
+        else:
+            logging.info(f'{local_file_path} is not a file')
 
 
 
@@ -92,6 +94,9 @@ def list_files_in_bucket(bucket_name):
 
     # Iterate over each blob and print its name
     file_names = [blob.name for blob in blobs]
+
+    if file_names == []:
+        logging.info(f'There are no files in the GCS bucket {bucket_name}')
     
     return(file_names)
 
