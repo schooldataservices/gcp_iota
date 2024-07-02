@@ -16,7 +16,7 @@ logging.info('\n\n-------------New Big Query Logging Instance')
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'powerschool-420113-db919282054b.json'
 with open('powerschool-420113-db919282054b.json') as json_file:
     j = json.load(json_file) 
-    sftp_pass = j['sftp_password']
+    sftp_pass = j['iota_sftp_password']
     
 # ----------------------------------------------------------
 #Need to make this portion to where it assesses all files in the dir recursively. 
@@ -39,4 +39,4 @@ def main(SFTP_folder_name):
 
 
 main("powerschool")
-main("EIS")
+main("EIS")#Takes about 12-14 mins

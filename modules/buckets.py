@@ -69,7 +69,9 @@ def upload_to_bucket(destination_blob_name, local_file, bucket_name):
         print(e)
         logging.info(f'Error uploading {local_file} to the {bucket_name} due to {e}')
 
-
+# The system cannot find the path specified: 'S:\\SFTP\\powerschool-combined'
+#In upload_all_files_to_bucket the sftp folder powerschool_combined gets changed to 
+#powerschool-combined 
 
 def upload_all_files_to_bucket(local_dir, bucket_name):
     for filename in os.listdir(local_dir):

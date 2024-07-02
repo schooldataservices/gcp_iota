@@ -11,16 +11,25 @@ def clear_logging_handlers():
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
+
 class SFTPConnection:
-    def __init__(self, host, username, password, cnopts, max_connections=5):
+    default_cnopts = pysftp.CnOpts()
+    default_cnopts.hostkeys = None
+
+    def __init__(self, host, username, password, max_connections=5, use_pool=True, cnopts=None):
         self.host = host
         self.username = username
         self.password = password
-        self.cnopts = cnopts
         self.max_connections = max_connections
-        self.pool = Queue(max_connections)
-        self.lock = Lock()
-        self._initialize_pool()
+        self.use_pool = use_pool
+        self.cnopts = cnopts or self.default_cnopts
+        if use_pool:
+            self.pool = Queue(max_connections)
+            self.lock = Lock()
+            self._initialize_pool()
+        else:
+            self.pool = None
+            self.lock = None
 
     def _initialize_pool(self):
         for _ in range(self.max_connections):
@@ -35,76 +44,76 @@ class SFTPConnection:
         )
 
     def get_connection(self):
-        with self.lock:
-            if self.pool.empty():
-                return self._create_new_connection()
-            return self.pool.get()
+        if self.use_pool:
+            with self.lock:
+                if self.pool.empty():
+                    return self._create_new_connection()
+                return self.pool.get()
+        else:
+            return self._create_new_connection()
 
     def return_connection(self, conn):
-        with self.lock:
-            if self.pool.full():
-                conn.close()
-            else:
-                self.pool.put(conn)
+        if self.use_pool:
+            with self.lock:
+                if self.pool.full():
+                    conn.close()
+                else:
+                    self.pool.put(conn)
+        else:
+            conn.close()
 
     def close_all_connections(self):
-        while not self.pool.empty():
-            conn = self.pool.get()
-            conn.close()
-            logging.info('SFTP connection closed')
-
-
-    def create_singular_connection(self):
-        return self._create_new_connection()
+        if self.use_pool:
+            while not self.pool.empty():
+                conn = self.pool.get()
+                conn.close()
+                logging.info('SFTP connection closed')
 
 
 
-def replicate_SFTP_files_to_local(sftp, sftp_folder_name):
 
-    if sftp_folder_name == 'idm-sensitive-exports':
-        local_dir = os.path.join('C:\\', 'powerschool')
-    else:
-        local_dir = os.path.join('C:\\', sftp_folder_name)
-
-    #create sftp local dir if it does not exists already. 
-    # local_dir = os.path.join('S:\\SFTP', sftp_folder_name)
-  
-   
-    os.makedirs(local_dir, exist_ok=True)
-
+def replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name):
+    os.makedirs(local_folder_name, exist_ok=True)
 
     try:
         sftp.chdir(sftp_folder_name)
         dir_contents = sftp.listdir()
         logging.info(f'Dir contents of {sftp_folder_name}: {dir_contents}')
 
+        if not dir_contents:
+            logging.info(f'No files to download in folder "{sftp_folder_name}".')
+            return
+
         for file_name in dir_contents:
             remote_file_path = os.path.join(sftp_folder_name, file_name)
-            local_file_path = os.path.join(local_dir, file_name)
+            local_file_path = os.path.join(local_folder_name, file_name)
 
             logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
             print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
 
             sftp.get(file_name, local_file_path)
-            logging.info(f'File "{file_name}" downloaded to local directory "{local_dir}"')
+            logging.info(f'File "{file_name}" downloaded to local directory "{local_file_path}"')
 
-        logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_dir}"')
+        logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_folder_name}"')
 
     except Exception as e:
         logging.error(f'An error occurred during file replication: {e}')
 
 
 
-
-def SFTP_conn(sftp_folder_name, sftp_pool, use_pool):
+def SFTP_conn_file_transfer(sftp_folder_name, local_folder_name, sftp_pool, use_pool):
     sftp = None
- 
+
     try:
-        sftp = sftp_pool.get_connection()
-        logging.info('SFTP connection established successfully from pool')
+        if use_pool:
+            sftp = sftp_pool.get_connection()
+            logging.info('SFTP connection established successfully from pool')
+        else:
+            sftp = sftp_pool._create_new_connection()
+            logging.info('SFTP singular connection established successfully')
 
         # Use the appropriate connection for file replication
-        replicate_SFTP_files_to_local(sftp, sftp_folder_name)
+        replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name)
 
     except pysftp.ConnectionException as ce:
         logging.error(f'Failed to establish SFTP connection: {ce}')
@@ -115,8 +124,14 @@ def SFTP_conn(sftp_folder_name, sftp_pool, use_pool):
 
     finally:
         if sftp:
-            sftp_pool.return_connection(sftp)  # Return the connection to the pool
-            logging.info('SFTP connection returned to pool')
+            if use_pool:
+                sftp_pool.return_connection(sftp)  # Return the connection to the pool
+                logging.info('SFTP connection returned to pool')
+            else:
+                sftp.close()
+                logging.info('SFTP singular connection closed')
+
+    
        
 
 

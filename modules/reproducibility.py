@@ -9,14 +9,14 @@ def read_file(file_path):
 
     # Read the file based on its extension
     if file_extension == 'csv':
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, low_memory=False)
     elif file_extension == 'xlsx' or file_extension == 'xls':
-        df = pd.read_excel(file_path)
+        df = pd.read_excel(file_path, low_memory=False)
     elif file_extension == 'json':
-        df = pd.read_json(file_path)
+        df = pd.read_json(file_path, low_memory=False)
     elif file_extension == 'txt':
         # You can specify additional parameters for reading text files
-        df = pd.read_csv(file_path, sep='\t')  # Example: tab-separated text file
+        df = pd.read_csv(file_path, sep='\t', low_memory=False)  # Example: tab-separated text file
     else:
         raise ValueError(f"Unsupported file format: {file_extension}")
 
@@ -31,17 +31,17 @@ def pre_processing(df):
         return(df)
 
 # ----------------------------------------------------
-#Bucket names must contain only lowercase letters, numbers, hyphens (-), and cannot start or end with a hyphen
 
-#Alter the SFTP folder name variable within the main func
-#Rename the local dir to be the same convention
-#Assume the SFTP_folder_name variable
+# Bucket names can only contain lowercase letters, numeric characters, 
+# dashes ( - ), underscores ( _ ), and dots ( . ). Spaces are not allowed.
+
+# Table names can contain letters (uppercase and lowercase), numbers, and underscores (_). 
+# Table names must start with a letter or underscore.
 
 def initial_schema_check(SFTP_folder_name):
 
     SFTP_folder_name = SFTP_folder_name.lower()
-    SFTP_folder_name = SFTP_folder_name.replace('_', '-')
-
+  
     return(SFTP_folder_name)
 
 
