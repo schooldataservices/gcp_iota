@@ -1,11 +1,14 @@
-import json 
 import pysftp
 import os
 import pandas_gbq
 import pandas as pd
 from modules.buckets import *
 from modules.reproducibility import *
+from modules.stacking_bluff_asd import *
+from modules.sftp_operations import *
 import logging
+
+clear_logging_handlers()
 
 #Configure loggging
 logging.basicConfig(filename='BigQuery.log', level=logging.INFO,
@@ -14,9 +17,6 @@ logging.info('\n\n-------------New Big Query Logging Instance')
 
 # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable in order to interact, import the SFTP password from the same file
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'powerschool-420113-db919282054b.json'
-with open('powerschool-420113-db919282054b.json') as json_file:
-    j = json.load(json_file) 
-    sftp_pass = j['iota_sftp_password']
     
 # ----------------------------------------------------------
 #Need to make this portion to where it assesses all files in the dir recursively. 
@@ -36,7 +36,15 @@ def main(SFTP_folder_name):
     
     instance.process()# Pass SFTP files into Bucket & then into Big Query tables
 
+#roughly 4 mins to stack and send to new dir
+directory_path_blf = r'S:\SFTP\powerschool_tpcsc'
+directory_path_asd = r'S:\SFTP\powerschool'
+output_directory = r'S:\SFTP\powerschool_combined'
+concat_files_from_directories(directory_path_blf, directory_path_asd, output_directory)
 
+main("powerschool_combined")
+main("EIS")
+logging.info('Process has reached the end\n\n')
 
-main("powerschool")
-main("EIS")#Takes about 12-14 mins
+#Fix indentation of the logs
+#Implement new SFTP module
