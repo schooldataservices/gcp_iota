@@ -1,6 +1,8 @@
 import pandas as pd
+import pandas_gbq
 import pysftp
 import logging
+import time
 import os
 from queue import Queue
 from threading import Lock
@@ -101,38 +103,127 @@ def replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name):
 
 
 
-def SFTP_conn_file_transfer(sftp_folder_name, local_folder_name, sftp_pool, use_pool):
-    sftp = None
+
+def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local_folder_name=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
+    conn = None
 
     try:
         if use_pool:
-            sftp = sftp_pool.get_connection()
+            conn = sftp_conn.get_connection()
             logging.info('SFTP connection established successfully from pool')
         else:
-            sftp = sftp_pool._create_new_connection()
+            conn = sftp_conn._create_new_connection()
             logging.info('SFTP singular connection established successfully')
 
-        # Use the appropriate connection for file replication
-        replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name)
+        # import pulls over google passwords from Clever, export sends GCP views over
+        if import_or_export == 'import':
+            replicate_SFTP_files_to_local(conn, sftp_folder_name, local_folder_name)
 
-    except pysftp.ConnectionException as ce:
-        logging.error(f'Failed to establish SFTP connection: {ce}')
-    except pysftp.AuthenticationException as ae:
-        logging.error(f'Authentication error during SFTP connection: {ae}')
+        elif import_or_export == 'export':
+            replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict)
+        else:
+            logging.error('Wrong variable for import or export')
+
     except Exception as e:
-        logging.error(f'An error occurred during SFTP operation: {e}')
+        logging.error(f'Failed to establish SFTP connection due to error: {e}')   
 
     finally:
-        if sftp:
+        if conn:
             if use_pool:
-                sftp_pool.return_connection(sftp)  # Return the connection to the pool
+                sftp_conn.return_connection(conn)  # Return the connection to the pool
                 logging.info('SFTP connection returned to pool')
             else:
-                sftp.close()
+                conn.close()
                 logging.info('SFTP singular connection closed')
 
+
+
+
+
+def replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict):
+    """
+    Function to send files to SFTP server from BigQuery tables.
     
-       
+    Parameters:
+    - sftp: pysftp.Connection object for SFTP connection.
+    - dictionary_naming: Dictionary mapping table names to remote filenames.
+    - sftp_folder_name: Remote folder name on SFTP server.
+    - project_id: Google Cloud project ID for BigQuery.
+    """
+
+    # Iterate over dictionary of table names and filenames
+    for table_name, remote_filename in naming_dict.items():
+
+        # Query BigQuery table
+        query = f"""
+        SELECT * FROM `{project_id}.{db}.{table_name}`
+        """
+        try:
+            # Execute the query and store the result in a DataFrame
+            df = pandas_gbq.read_gbq(query, project_id=project_id)
+        except Exception as e:
+            logging.error(f'Error querying table "{table_name}": {str(e)}')
+            continue
+
+        # Create nested folder based on sftp_folder_name
+        os.makedirs(sftp_folder_name, exist_ok=True)
+        logging.info('Directory sftp_file_transfer created or already exists')
+
+        # Write files to local dir
+        local_path = os.path.join(sftp_folder_name, remote_filename)
+        try:
+            df.to_csv(local_path, index=False)
+            logging.info(f'File {table_name} being written to local dir {local_path}')
+        except Exception as e:
+            logging.error(f'File {table_name} unable to be written to local dir {local_path}: {str(e)}')
+            
+
+
+
+def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
+    conn = sftp._create_new_connection()
+    logging.info('SFTP singular connection established successfully')
+
+    for root, _, files in os.walk(local_dir):
+        for file in files:
+            local_path = os.path.join(root, file)
+            relative_path = os.path.relpath(local_path, local_dir)
+            remote_path = os.path.join(remote_dir, relative_path).replace('\\', '/')
+
+            # Print paths for debugging
+            print(f"Local path: {local_path}")
+            print(f"Remote path: {remote_path}")
+
+            # Check if the file exists
+            if not os.path.exists(local_path):
+                print(f"File not found: {local_path}")
+                continue
+
+            # Upload the file
+            conn.put(local_path, remote_path)
+            print(f"Uploaded {local_path} to {remote_path}")
+            logging.info(f"Uploaded {local_path} to {remote_path}")
+
+
+# def main():
+#     local_dir = '/path/to/local/directory'
+#     remote_dir = '/path/to/remote/directory'
+#     host = 'your_remote_host'
+#     username = 'your_username'
+#     password = 'your_password'
+
+
+#         sftp_copy_dir(local_dir, remote_dir, sftp)
+
+# if __name__ == "__main__":
+#     main()
+
+
+
+
+
+
+
 
 
 #SSH tunneling example for CustomPlanet
