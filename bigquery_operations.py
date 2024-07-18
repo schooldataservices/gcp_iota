@@ -5,7 +5,7 @@ import pandas as pd
 from modules.buckets import *
 from modules.reproducibility import *
 from modules.stacking_bluff_asd import *
-from modules.sftp_operations import *
+from modules.sftp_ops import *
 import logging
 
 clear_logging_handlers()
