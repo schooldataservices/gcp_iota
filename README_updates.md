@@ -6,7 +6,7 @@
 #### Refactoring SFTP Module
 - **Objective**: Modify the SFTP module to work for Clever and SAVVAS.
 - **Tasks**:
-  - Pull Google addresses from Clever directly into the `powerschool_combined` folder so it can be created in BigQuert tables.(Waiting on the population of these files)
+  - Pull Google addresses from Clever directly into the `powerschool_combined` folder so it can be created in BigQuery tables.(Waiting on the population of these files)
   - Pull down BigQuery views, populate as local files and push to Clever and SAVVAS SFTP folders in specific naming convention below. 
 
 ```python
