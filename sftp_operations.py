@@ -78,7 +78,7 @@ SFTP_conn_file_exchange(sftp_conn_clever_export,
 
 # Export the local replicated files to Clevers SFTP
 SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\clever_iota_file_transfer',
-               remote_dir='/',  #root dir on clevers sftp
+               remote_dir='/home/boundless-calendar-0789',  #root dir on clevers sftp
                sftp = sftp_conn_clever_export)
 
 
@@ -113,27 +113,6 @@ sftp_conn_savva.close_all_connections()
 logging.info('Process has reached the end')
 
 
-
-
-#Current run diagnosis. 
-
-#No Google Password files to download in folder "idm-sensitive-exports"
-#Once these files are available these will send to the sftp folder powerschool_combined
-
-#All Clever views succesfully brought down with correct naming to local dir
-#Sending to root dir in sftp.clever.com as csvs
-
-# ------SAVVA-------
-#These file are good. Brought down from BQ, renaming succesfully, and uploaded to SAVVA SIS folder
-
-
-
-
-#Notes
-#Going to be a sixth file to send to clever
-
 #Remove piplock until ran in virtual env
-
-#There are two use_pool args. Narrow that down
 #Implement a catch if the file does not exist in BQ, example is clever_enrollments
 #Specify which sftp conn is established in logs
