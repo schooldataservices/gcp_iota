@@ -6,8 +6,8 @@
 #### Refactoring SFTP Module
 - **Objective**: Modify the SFTP module to work for Clever and SAVVAS.
 - **Tasks**:
-  - Pull Google addresses from Clever directly into the `powerschool_combined` folder so it can be created in BigQuery tables.(Waiting on the population of these files)
-  - Pull down BigQuery views, populate as local files and push to Clever and SAVVAS SFTP folders in specific naming convention below. 
+  - Pull Google addresses from Clever directly into the `powerschool_combined` folder so it can be created in BigQuery tables.
+  - Pull down BigQuery views, and populate as local files and push to Clever and SAVVAS SFTP folders as txt or csv files in specific naming convention below. 
 
 ```python
 #All BQ tables that are begin queryed are the keys. 
@@ -47,7 +47,7 @@ savva_dictionary = {
 | **7/10** | 1 hour         | Set up infrastructure to write to Clever and SAVVAS SFTP. |
 | **7/11** | 1 hour         | Worked on SAVVAS pull-down from Google Cloud, replicated files for send, and implemented SFTP connection pooling. |
 | **7/12** | 2 hours        | Debugging and implementing Clever send. |
-| **7/16** | 2 hours        | Integrated students table into EIS Cohort Tracking Scrape, removed old logic, enhanced logging, applied EIS application changes, and reorganized EIS Selenium Python files. Task scheduler setups|
+| **7/16** | 3 hours        | Integrated students table into EIS Cohort Tracking Scrape, removed old logic, enhanced logging, applied EIS application changes, and reorganized EIS Selenium Python files. Task scheduler setups|
 
 ### Detailed Task Descriptions:
 
