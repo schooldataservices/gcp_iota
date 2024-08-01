@@ -1,5 +1,5 @@
 ### Project Summary:
-**Objective**: Implement proper SFTP pushes & pulls for Clever and SAVVAS, stack files for Bluff & ASD to singular files, ensure EIS_Selenium processes are set to download properly, ensure BigQuery population of all necessary files. Debug & log out local scripts and version control all files in Bitbucket with detailed comments.
+**Objective**: Implement proper SFTP pushes & pulls for Clever and SAVVAS, stack files for Bluff & ASD to singular files, ensure EIS_Selenium processes are set to download properly, ensure BigQuery population of all necessary local files via Google API. Debug & log out local scripts and version control all files in Bitbucket with detailed comments.
 
 ### Task Breakdown:
 
@@ -16,7 +16,8 @@ clever_dictionary = {'Clever_schools':'schools.csv',
                     'Clever_students':'students.csv',
                     'Clever_teachers':'teachers.csv',
                     'Clever_sections':'sections.csv',
-                    'Clever_enrollments':'enrollments.csv' 
+                    'Clever_enrollments':'enrollments.csv',
+                    'Clever_staff': 'staff.csv'
                     }
 
 savva_dictionary = {
@@ -48,6 +49,7 @@ savva_dictionary = {
 | **7/11** | 1 hour         | Worked on SAVVAS pull-down from Google Cloud, replicated files for send, and implemented SFTP connection pooling. |
 | **7/12** | 2 hours        | Debugging and implementing Clever send. |
 | **7/16** | 3 hours        | Integrated students table into EIS Cohort Tracking Scrape, removed old logic, enhanced logging, applied EIS application changes, and reorganized EIS Selenium Python files. Task scheduler setups|
+| **7/30** | 1 hour        | Adjusting SFTP sends for Clever, debugging, testing, updating version |
 
 ### Detailed Task Descriptions:
 
@@ -57,8 +59,8 @@ savva_dictionary = {
    - Integrated additional logging and error handling for robustness.
 
 2. **BigQuery Population**:
-   - Restructured how data is populated in BigQuery to accommodate new sources and formats.
-   - Created schema to bring together ASD and Bluff schools as singular file and uploaded them to BigQuery.
+   - Restructured how data is populated in BigQuery through scalable scheme to accommodate new sources and formats.
+   - Created script to bring together ASD and Bluff schools as singular file and uploaded them to BigQuery daily.
 
 3. **EIS Selenium**:
    - Pulled down necessary student data from BQ, and implemented into EIS scrape to get prior enrollment history. Set up process to run on a schedule for the first of the month, and populated in BQ EIS db. 
