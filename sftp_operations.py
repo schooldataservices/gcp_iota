@@ -28,7 +28,8 @@ clever_dictionary = {'Clever_schools':'schools.csv',
                     'Clever_students':'students.csv',
                     'Clever_teachers':'teachers.csv',
                     'Clever_sections':'sections.csv',
-                    'Clever_enrollments':'enrollments.csv' #empty file, need to fix the logging
+                    'Clever_enrollments':'enrollments.csv', 
+                    'Clever_staff': 'staff.csv'
                     }
 
 savva_dictionary = {
