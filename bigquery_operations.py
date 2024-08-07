@@ -27,7 +27,7 @@ def main(SFTP_folder_name):
 
     instance = Create(
                 project_id='powerschool-420113',
-                location = 'us-south1',
+                location = 'us-central1',
                 bucket=f'{SFTP_folder_name}bucket-iotaschools-1',
                 local_dir = fr'S:\SFTP\{SFTP_folder_name}',
                 db = SFTP_folder_name,
