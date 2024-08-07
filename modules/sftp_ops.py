@@ -74,7 +74,10 @@ class SFTPConnection:
 
 
 
-def replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name):
+import os
+import logging
+
+def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None):
     os.makedirs(local_folder_name, exist_ok=True)
 
     try:
@@ -82,21 +85,40 @@ def replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name):
         dir_contents = sftp.listdir()
         logging.info(f'Dir contents of {sftp_folder_name}: {dir_contents}')
 
-        if not dir_contents:
-            logging.info(f'No files to download in folder "{sftp_folder_name}".')
-            return
+        if file_to_download:
+            if file_to_download in dir_contents:
+                remote_file_path = os.path.join(sftp_folder_name, file_to_download)
 
-        for file_name in dir_contents:
-            remote_file_path = os.path.join(sftp_folder_name, file_name)
-            local_file_path = os.path.join(local_folder_name, file_name)
+                #reform local_file_path specifically for easyIEP. Singular file rename that references the dictionary passed in
+                dict_name = naming_dict.get(file_to_download)
 
-            logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
-            print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+                local_file_path = os.path.join(local_folder_name, dict_name)
 
-            sftp.get(file_name, local_file_path)
-            logging.info(f'File "{file_name}" downloaded to local directory "{local_file_path}"')
+                logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+                print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
 
-        logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_folder_name}"')
+                sftp.get(file_to_download, local_file_path)
+                logging.info(f'File "{file_to_download}" downloaded to local directory "{local_file_path}"')
+            else:
+                logging.warning(f'File "{file_to_download}" not found in directory "{sftp_folder_name}".')
+        else:
+            if not dir_contents:
+                logging.info(f'No files to download in folder "{sftp_folder_name}".')
+                return
+
+            logging.info('No specification for file_to_download as a standalone, assuming all files need to be downloaded')
+
+            for file_name in dir_contents:
+                remote_file_path = os.path.join(sftp_folder_name, file_name)
+                local_file_path = os.path.join(local_folder_name, file_name)
+
+                logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+                print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
+
+                sftp.get(file_name, local_file_path)
+                logging.info(f'File "{file_name}" downloaded to local directory "{local_file_path}"')
+
+            logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_folder_name}"')
 
     except Exception as e:
         logging.error(f'An error occurred during file replication: {e}')
@@ -104,7 +126,8 @@ def replicate_SFTP_files_to_local(sftp, sftp_folder_name, local_folder_name):
 
 
 
-def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local_folder_name=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
+
+def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
     conn = None
 
     try:
@@ -117,7 +140,7 @@ def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local
 
         # import pulls over google passwords from Clever, export sends GCP views over
         if import_or_export == 'import':
-            replicate_SFTP_files_to_local(conn, sftp_folder_name, local_folder_name)
+            replicate_SFTP_file_to_local(conn, sftp_folder_name, local_folder_name, file_to_download, naming_dict)
 
         elif import_or_export == 'export':
             replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict)
