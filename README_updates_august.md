@@ -18,6 +18,7 @@ Incorporate EasyIEP SFTP transfer to Google Cloud Population.
    - Download Google Cloud SDK (Software Development Kit) to local to apply new permissions to service account to properly create buckets and tables in new regions
    - Alter python class instance to accept location as argument passed down from functions
    - Delete prior tables and buckets to allow for new creations
+   - Change BQ view pulldowns to read from roster_files db
    - Enhanced logging for transparency on location creation 
 
 2. **Add in EasyIEP SFTP transfer setup & integrate into current processes**

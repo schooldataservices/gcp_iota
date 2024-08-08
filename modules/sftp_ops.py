@@ -127,7 +127,7 @@ def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file
 
 
 
-def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
+def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, db=None, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113'):
     conn = None
 
     try:
@@ -173,6 +173,7 @@ def replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict):
     - sftp_folder_name: Remote folder name on SFTP server.
     - project_id: Google Cloud project ID for BigQuery.
     """
+    logging.info(f'Replicating BQ views to local dir from the {db} db')
 
     # Iterate over dictionary of table names and filenames
     for table_name, remote_filename in naming_dict.items():

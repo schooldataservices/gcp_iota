@@ -78,8 +78,9 @@ sftp_conn_clever_export = SFTPConnection(
 SFTP_conn_file_exchange(sftp_conn_clever_export,
                         import_or_export = 'export',
                         sftp_folder_name='clever_iota_file_transfer', 
+                        db='roster_files',
                         naming_dict = clever_dictionary,
-                        use_pool=False
+                        use_pool=False,
                         )
 
 # Export the local replicated files to Clevers SFTP
@@ -102,11 +103,12 @@ sftp_conn_savva = SFTPConnection(
 SFTP_conn_file_exchange(sftp_conn_savva,
                         import_or_export = 'export',
                         sftp_folder_name='savva_iota_file_transfer', 
+                        db='roster_files',
                         naming_dict = savva_dictionary,
                         use_pool=False
                         )
 
-
+#Sends local files over the SAVVAS sftp SIS folder
 SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\savva_iota_file_transfer',
                remote_dir='/SIS',  #root dir on clevers sftp
                sftp = sftp_conn_savva)
