@@ -36,7 +36,7 @@ sftp_conn_clever_import = SFTPConnection(
     use_pool=False 
 )
 
-# Import brings in Google passwords info from Clevers SFTP directly to powerschool_combined
+# Import brings in Google passwords info from Clevers SFTP directly to misc_imports
 SFTP_conn_file_exchange(sftp_conn_clever_import,
                         import_or_export = 'import',
                         sftp_folder_name='idm-sensitive-exports', 
@@ -52,8 +52,7 @@ sftp_conn_iep = SFTPConnection(
     use_pool=False
 )
 
-#Import easyIEP files directly to PS combined
-#This downloaded all files in their for some reason
+#Import easyIEP files directly to misc_imports
 
 SFTP_conn_file_exchange(sftp_conn_iep,
                         import_or_export = 'import',
