@@ -44,6 +44,7 @@ concat_files_from_directories(directory_path_blf, directory_path_asd, output_dir
 
 main("powerschool_combined")
 main("EIS")
+main("misc_imports")
 logging.info('Process has reached the end\n\n')
 
 #Fix indentation of the logs

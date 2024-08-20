@@ -1,4 +1,6 @@
 import pandas as pd
+import os 
+import sys
 
 
 
@@ -54,6 +56,5 @@ def remove_extension_from_file(file_name):
         return '.'.join(parts[:-1])  # Join all parts except the last one
     else:
         return file_name  # If there's no extension, return the original filename
-
 
 
