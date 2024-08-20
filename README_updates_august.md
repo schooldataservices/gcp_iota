@@ -1,6 +1,7 @@
 ### Project Summary:
 **Objective**: Alter python processes to move all automated buckets, and table creation to new region as us-central1. 
 Incorporate EasyIEP SFTP transfer to Google Cloud Population.
+Seperate Clever, and EasyIEP imports out into seperate file.
 
 
 
@@ -9,7 +10,8 @@ Incorporate EasyIEP SFTP transfer to Google Cloud Population.
 
 | **Date** | **Time Spent** | **Tasks Completed** |
 |----------|----------------|---------------------|
-| **8/7**  | 3 hours    | Alter python processes to move all automated buckets, and table creation to new region as us-central1. Add in EasyIEP SFTP transfer and integrate logic into codebase |
+| **8/7**  | 3 hours        | Alter python processes to move all automated buckets, and table creation to new region as us-central1. Add in EasyIEP SFTP transfer and integrate logic into codebase |
+| **8/19** | 1.5 hours      | Seperate Clever, and EasyIEP imports out into seperate file. 
 
 
 ### Detailed Task Descriptions:
@@ -24,6 +26,12 @@ Incorporate EasyIEP SFTP transfer to Google Cloud Population.
 2. **Add in EasyIEP SFTP transfer setup & integrate into current processes**
    - Alter the buckets.py module to be able to download specific file from SFTP rather than all files
    - Have functions work to download all files for SAVVA and specific file for easyIEP while following naming conventions
+
+3. **Seperate Clever, and EasyIEP imports out into seperate file** 
+   -Branch out from main script and up seperate python file and batch script for these two processes to run at 6:50 AM every day
+   -Implement Python hierarchy and organization for proper import, logs, testing. Delete remnants of these files within Powerschool-combined SFTP folder, bucket and table. 
+
+
 ---
 
 ### Next Steps:
