@@ -13,11 +13,13 @@
 ### Detailed Task Descriptions:
 
 1. **Breaking apart BigQuery operations into separate scripts for timing**:
+
    - Altered directory setup for multiple batch scripts on BQ operations.
    - Changed relative paths and deployed new logging.
    - Updated timing setup for `misc_imports` and tested the new configuration.
 
 2. **EIS Selenium Scripts**:
+
    - Configured the server’s Chrome browser to prevent updates and integrated a newly configured WebDriver setup.
    - Accounted for slowdowns in the EIS website when navigating and launching applications.
    - Handled revolving XPath elements for schools during website refreshes.
@@ -25,6 +27,7 @@
    - https://bitbucket.org/iota-schools/eis_selenium/src/main/ 
 
 3. **New Scheduling Setup**:
+
    - **3:00 AM**: Google Cloud Bucket, DB, and table creation for `powerschool_combined` and EIS folders.
    - **5:00 AM**: SFTP operations for Clever and SAVVAS exports.
    - **6:50 AM**: SFTP miscellaneous operations (Clever Imports, EasyIEP Import).
