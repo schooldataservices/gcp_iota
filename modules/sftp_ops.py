@@ -74,8 +74,6 @@ class SFTPConnection:
 
 
 
-import os
-import logging
 
 def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None):
     os.makedirs(local_folder_name, exist_ok=True)
@@ -240,25 +238,9 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
     conn.close()
     logging.info('SFTP singular connection closed')
 
-# def main():
-#     local_dir = '/path/to/local/directory'
-#     remote_dir = '/path/to/remote/directory'
-#     host = 'your_remote_host'
-#     username = 'your_username'
-#     password = 'your_password'
 
 
-#         sftp_copy_dir(local_dir, remote_dir, sftp)
-
-# if __name__ == "__main__":
-#     main()
-
-
-
-
-
-
-
+#This can benefit from OOP
 
 
 #SSH tunneling example for CustomPlanet
