@@ -125,7 +125,7 @@ def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file
 
 
 
-def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
+def SFTP_conn_file_exchange(sftp_conn, import_or_export, target_sftp_folder_name, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
     conn = None
 
     try:
@@ -133,15 +133,18 @@ def SFTP_conn_file_exchange(sftp_conn, import_or_export, sftp_folder_name, local
             conn = sftp_conn.get_connection()
             logging.info('SFTP connection established successfully from pool')
         else:
+            logging.info(f'Attempting to create new connection')
             conn = sftp_conn._create_new_connection()
             logging.info('\n\nSFTP singular connection established successfully')
 
         # import pulls over google passwords from Clever, export sends GCP views over
         if import_or_export == 'import':
-            replicate_SFTP_file_to_local(conn, sftp_folder_name, local_folder_name, file_to_download, naming_dict)
+            logging.info('Attempting to replicate SFTP file to local')
+            replicate_SFTP_file_to_local(conn, target_sftp_folder_name, local_folder_name, file_to_download, naming_dict)
 
         elif import_or_export == 'export':
-            replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict)
+            logging.info('Attempting to replicate BQ views to local')
+            replicate_BQ_views_to_local(target_sftp_folder_name, project_id, db, naming_dict)
         else:
             logging.error('Wrong variable for import or export')
 
