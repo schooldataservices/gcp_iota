@@ -7,7 +7,8 @@
 | **Date**       | **Time Spent** | **Tasks Completed**                                     |
 |----------------|----------------|--------------------------------------------------------|
 | **09/11/2024** | 1 hour         | - Broke apart BigQuery operations into separate scripts |
-| **09/19 - 09/20** | 5 hours    | - Worked on EIS Selenium scripts                        |
+| **09/19 - 09/20** | 5 hours     | - Worked on EIS Selenium scripts                        |
+| **09/20 - 09/30** | 2 hours     | - EIS Selenium Scripts continued                        |
 
 
 ### Detailed Task Descriptions:
@@ -23,6 +24,9 @@
    - Configured the server’s Chrome browser to prevent updates and integrated a newly configured WebDriver setup.
    - Accounted for slowdowns in the EIS website when navigating and launching applications.
    - Handled revolving XPath elements for schools during website refreshes.
+   - Inserted error handling when password becomes outdated
+   - Inserted date level directories that roll back and send most recent files if files are unable to be downloaded succesfully
+   - Inserted progressive retries if timing is not matching on EIS homepage load
    - Configured logging, file paths, scheduling, and batch scripts.
    - https://bitbucket.org/iota-schools/eis_selenium/src/main/ 
 
