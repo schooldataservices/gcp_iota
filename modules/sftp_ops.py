@@ -75,12 +75,12 @@ class SFTPConnection:
 
 
 
-def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None):
+def replicate_SFTP_file_to_local(sftp_conn, sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None):
     os.makedirs(local_folder_name, exist_ok=True)
 
     try:
-        sftp.chdir(sftp_folder_name)
-        dir_contents = sftp.listdir()
+        sftp_conn.chdir(sftp_folder_name)
+        dir_contents = sftp_conn.listdir()
         logging.info(f'Dir contents of {sftp_folder_name}: {dir_contents}')
 
         if file_to_download:
@@ -93,9 +93,8 @@ def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file
                 local_file_path = os.path.join(local_folder_name, dict_name)
 
                 logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
-                print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
 
-                sftp.get(file_to_download, local_file_path)
+                sftp_conn.get(file_to_download, local_file_path)
                 logging.info(f'File "{file_to_download}" downloaded to local directory "{local_file_path}"')
             else:
                 logging.warning(f'File "{file_to_download}" not found in directory "{sftp_folder_name}".')
@@ -111,9 +110,8 @@ def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file
                 local_file_path = os.path.join(local_folder_name, file_name)
 
                 logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
-                print(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
 
-                sftp.get(file_name, local_file_path)
+                sftp_conn.get(file_name, local_file_path)
                 logging.info(f'File "{file_name}" downloaded to local directory "{local_file_path}"')
 
             logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_folder_name}"')
@@ -125,31 +123,67 @@ def replicate_SFTP_file_to_local(sftp, sftp_folder_name, local_folder_name, file
 
 
 
-def SFTP_conn_file_exchange(sftp_conn, import_or_export, target_sftp_folder_name, local_folder_name=None, file_to_download=None, use_pool=False, naming_dict=None, project_id='powerschool-420113', db='powerschool_staged'):
-    conn = None
+def SFTP_conn_file_exchange(sftp_conn, **kwargs):
+    conn = None #For loops
+
+  
+    # Access parameters using kwargs.get()
+    import_or_export = kwargs.get('import_or_export')
+    target_sftp_folder_name = kwargs.get('target_sftp_folder_name')
+    local_folder_name = kwargs.get('local_folder_name', None)
+    file_to_download = kwargs.get('file_to_download', None)
+    use_pool = kwargs.get('use_pool', False)
+    naming_dict = kwargs.get('naming_dict', None)
+    db = kwargs.get('db', None)
+    export_local_bq_replications = kwargs.get('export_local_bq_replications', None)
+    export_sftp_folder_name = kwargs.get('export_sftp_folder_name', None)
+    project_id = 'powerschool-420113'
+
+    # Logging for debugging
+    logging.info(f"import_or_export: {import_or_export}")
+    logging.info(f"target_sftp_folder_name: {target_sftp_folder_name}")
+    logging.info(f"local_folder_name: {local_folder_name}")
+    logging.info(f"file_to_download: {file_to_download}")
+    logging.info(f"use_pool: {use_pool}")
+    logging.info(f"naming_dict: {naming_dict}")
+    logging.info(f"db: {db}")
+    logging.info(f"export_local_bq_replications: {export_local_bq_replications}")
+    logging.info(f"export_sftp_folder_name: {export_sftp_folder_name}")
+    logging.info(f"use_pool: {use_pool}")
+    logging.info(f"project_id: {project_id}")
 
     try:
         if use_pool:
             conn = sftp_conn.get_connection()
-            logging.info('SFTP connection established successfully from pool')
+            logging.info('\n\n\nSFTP connection established successfully from pool')
         else:
-            logging.info(f'Attempting to create new connection')
+            logging.info(f'\n\n\nAttempting to create new connection')
             conn = sftp_conn._create_new_connection()
-            logging.info('\n\nSFTP singular connection established successfully')
+            logging.info('SFTP singular connection established successfully within SFTP_conn_file_exchange')
 
-        # import pulls over google passwords from Clever, export sends GCP views over
+           # import pulls over google passwords from Clever, export sends GCP views over
         if import_or_export == 'import':
             logging.info('Attempting to replicate SFTP file to local')
             replicate_SFTP_file_to_local(conn, target_sftp_folder_name, local_folder_name, file_to_download, naming_dict)
 
         elif import_or_export == 'export':
             logging.info('Attempting to replicate BQ views to local')
-            replicate_BQ_views_to_local(target_sftp_folder_name, project_id, db, naming_dict)
+            replicate_BQ_views_to_local(local_folder_name, project_id, db, naming_dict)  
         else:
             logging.error('Wrong variable for import or export')
 
+        # If true, and folder specified. Currently only for Savva and clever exports
+        if export_local_bq_replications and export_sftp_folder_name is not None:
+            try:
+                logging.info(f'Attempting to export local bq replications to {export_sftp_folder_name}')
+                SFTP_export_dir_to_SFTP(local_folder_name, export_sftp_folder_name, sftp=sftp_conn)
+            except Exception as e:
+                logging.error(f'Error during SFTP_export_dir_to_SFTP as {e}')
+        else:
+            logging.info(f'export_local_bq_replications value of {export_local_bq_replications} and export_sftp_folder_name value of {export_sftp_folder_name} preventing the SFTP_export_dir_to_SFTP function from being triggered')
+    
     except Exception as e:
-        logging.error(f'Failed to establish SFTP connection due to error: {e}')   
+        logging.error(f'Process failed due to error: {e}')   
 
     finally:
         if conn:
@@ -164,7 +198,7 @@ def SFTP_conn_file_exchange(sftp_conn, import_or_export, target_sftp_folder_name
 
 
 
-def replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict):
+def replicate_BQ_views_to_local(local_folder_name, project_id, db, naming_dict):
     """
     Function to send files to SFTP server from BigQuery tables.
     
@@ -179,44 +213,53 @@ def replicate_BQ_views_to_local(sftp_folder_name, project_id, db, naming_dict):
     for table_name, remote_filename in naming_dict.items():
 
         # Query BigQuery table
-        query = f"""
-        SELECT * FROM `{project_id}.{db}.{table_name}`
-        """
+        query = f"""SELECT * FROM `{project_id}.{db}.{table_name}`"""
         try:
             # Execute the query and store the result in a DataFrame
             df = pandas_gbq.read_gbq(query, project_id=project_id)
+            logging.info(f'Reading {query} from BQ')
         except Exception as e:
             logging.error(f'Error querying table "{table_name}": {str(e)}')
             continue
-
+        
         # Create nested folder based on sftp_folder_name
-        os.makedirs(sftp_folder_name, exist_ok=True)
-        logging.info('Directory sftp_file_transfer created or already exists')
+        try:
+            # Check if directory exists before trying to create it
+            if not os.path.exists(local_folder_name):
+                os.makedirs(local_folder_name)
+                logging.info(f'Directory {local_folder_name} was created for the first time.')
+            else:
+                logging.info(f'Directory {local_folder_name} already exists.')
+        except Exception as e:
+            logging.error(f'Unable to create {local_folder_name} due to {str(e)}')
 
+  
         # Write files to local dir
-        local_path = os.path.join(sftp_folder_name, remote_filename)
+        local_path = os.path.join(local_folder_name, remote_filename)
         try:
             df.to_csv(local_path, index=False)
-            logging.info(f'File {table_name} being written to local dir {local_path}')
+            logging.info(f'Big Query table - {table_name} being replicated to local dir {local_path}')
         except Exception as e:
-            logging.error(f'File {table_name} unable to be written to local dir {local_path}: {str(e)}')
+            logging.error(f'Big Query table - {table_name} unable to be replicated to local dir {local_path}: {str(e)}')
             
 
 
 
-def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
+def SFTP_export_dir_to_SFTP(local_folder_name, export_sftp_folder_name, sftp):
     conn = sftp._create_new_connection()
-    logging.info('\n\nSFTP singular connection established successfully')
+    logging.info('\n\n\nSFTP singular connection established successfully')
 
-    for root, _, files in os.walk(local_dir):
+    #test if local_folder_name has files first
+    if not os.listdir(local_folder_name):  # Check if the folder is empty
+        logging.warning(f'The local folder {local_folder_name} is empty. No files to export to {export_sftp_folder_name}')
+        return
+
+    for root, _, files in os.walk(local_folder_name):
         for file in files:
             local_path = os.path.join(root, file)
-            relative_path = os.path.relpath(local_path, local_dir)
-            remote_path = os.path.join(remote_dir, relative_path).replace('\\', '/')
+            relative_path = os.path.relpath(local_path, local_folder_name)
+            remote_path = os.path.join(export_sftp_folder_name, relative_path).replace('\\', '/')
 
-            # Print paths for debugging
-            print(f"Local path: {local_path}")
-            print(f"Remote path: {remote_path}")
 
             # Log paths for debugging
             logging.info(f"Local path: {local_path}")
@@ -224,17 +267,14 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
 
             # Check if the file exists
             if not os.path.exists(local_path):
-                print(f"File not found: {local_path}")
                 logging.error(f"File not found: {local_path}")
                 continue
 
             # Upload the file
             try:
                 conn.put(local_path, remote_path)
-                print(f"Uploaded {local_path} to {remote_path}")
                 logging.info(f"Uploaded {local_path} to {remote_path}")
             except Exception as e:
-                print(f"Error uploading {local_path} to {remote_path}: {str(e)}")
                 logging.error(f"Error uploading {local_path} to {remote_path}: {str(e)}")
 
     # Close the connection after the operation
@@ -245,54 +285,3 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
 
 #This can benefit from OOP
 
-
-#SSH tunneling example for CustomPlanet
-# from sshtunnel import SSHTunnelForwarder
-# import pymysql
-
-# # Establish SSH tunnel
-# with SSHTunnelForwarder(
-#     (ssh_host, ssh_port),
-#     ssh_username=ssh_username,
-#     ssh_password=ssh_password,
-#     remote_bind_address=(mysql_host, mysql_port),
-# ) as tunnel:
-#     print(f'Tunnel local bind port: {tunnel.local_bind_port}')
-#     print(f'Tunnel is active: {tunnel.is_active}')
-
-#     # Connect to MySQL through the tunnel
-#     conn = pymysql.connect(
-#         host=mysql_host,
-#         port=tunnel.local_bind_port,
-#         user=mysql_username,
-#         password=mysql_password,
-#         database='opencartdb',
-#         connect_timeout=30,  # Increase the connection timeout
-#     )
-
-#     orders = '''
-#             SELECT order_id, firstname, lastname, email, telephone, payment_city, payment_zone, payment_country, payment_method, 
-#             shipping_address_1, shipping_city, shipping_country, total, date_added, date_modified, design_file,
-#             shipping_date FROM oc_order
-#             '''
-    
-#     order_product = '''
-#             SELECT order_product_id, order_id, product_id, name, model, quantity, price, total FROM oc_order_product
-
-#                      '''
-    
-#     just_product = '''
-#             SELECT product_id, what, image FROM oc_product
-
-#     '''    
-    
-
-#     orders = pd.read_sql_query(orders, conn)
-#     order_product = pd.read_sql_query(order_product, conn)
-#     just_product = pd.read_sql_query(just_product, conn)
-
-#     try:
-#         conn.close()
-#         print('conn is closed')
-#     except:
-#         print('conn still open')

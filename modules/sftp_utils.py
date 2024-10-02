@@ -2,6 +2,7 @@ import logging
 from modules.sftp_ops import SFTPConnection, SFTP_conn_file_exchange, SFTP_export_dir_to_SFTP
 import json
 import os
+from airflow.exceptions import AirflowException
 
 def configure_logging():
     logging.basicConfig(
@@ -28,12 +29,12 @@ def load_credentials():
         raise
 
 
-
 def setup_sftp_connection(creds, type_):
 
+
     if creds is None:
-        logging.error("Credentials are None.")
-        raise ValueError("Credentials are required to establish SFTP connection.")
+        logging.error("No credentials found in XCom. Cannot establish SFTP connection.")
+        raise AirflowException("Credentials are required to establish SFTP connection.")
 
     connections = {
         'clever_import': SFTPConnection(creds['clever_import_host'], creds['clever_import_username'], creds['clever_import_password'], use_pool=False),
@@ -43,38 +44,43 @@ def setup_sftp_connection(creds, type_):
     }
 
     if type_ not in connections:
-        raise ValueError(f"Unknown connection type: {type_}")
+        raise AirflowException(f"Unknown connection type: {type_}")
     return connections[type_]
 
 
 
 
-def dynamic_sftp_file_exchange(sftp_type, import_or_export, target_sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None, export_local_bq_replications=False, export_sftp_folder_name=None, use_pool=False):
-    def inner_dynamic_file_exchange(creds, **context):
 
-        creds = context['ti'].xcom_pull(task_ids='load_credentials', key='credentials')
-        if creds is None:
-            logging.error("No credentials found in XCom. Cannot establish SFTP connection.")
-            return  # Exit early if no credentials
+# sftp_type, import_or_export, target_sftp_folder_name, local_folder_name, db, file_to_download=None, naming_dict=None, export_local_bq_replications=False, export_sftp_folder_name=None, use_pool=False, project_id='powerschool-420113', **kwargs
+def dynamic_sftp_file_exchange(**kwargs):
+    def inner_dynamic_file_exchange(**context):
         
+        # When Airflow runs this callable (dynamic_sftp_file_exchange), the context is automatically injected from provide_context=True.
+        ti = context['ti']
+        creds = ti.xcom_pull(task_ids='load_credentials', key='credentials')
+
+        if creds is None:
+            raise AirflowException("No credentials found in XCom.")
+        
+        sftp_type = kwargs.get('sftp_type', 'default_sftp_type')  # Retrieve sftp_type from kwargs
         sftp_conn = setup_sftp_connection(creds, type_=sftp_type)
 
-        # Perform file exchange
-        SFTP_conn_file_exchange(
-            sftp_conn,
-            import_or_export=import_or_export,
-            target_sftp_folder_name=target_sftp_folder_name,
-            local_folder_name=local_folder_name
-        )
+        try:
+            SFTP_conn_file_exchange(
+                sftp_conn,
+                **kwargs
+            )
 
-        # Export files if needed
-        if export_local_bq_replications and export_sftp_folder_name is not None:
-            SFTP_export_dir_to_SFTP(local_dir=local_folder_name, remote_dir=export_sftp_folder_name, sftp=sftp_conn)
+        except Exception as e:
+            logging.error(f'Error during SFTP file exchange for {sftp_type} - {e}')
+        
+        try:
+            sftp_conn.close_all_connections()
+            logging.info(f'SFTP connection for {sftp_type} closed')
+        except Exception as e:
+            logging.error(f'Unable to close connection for {sftp_type} due to {e}')
 
-        # Push SFTP connection to XCom
-        context['ti'].xcom_push(key=f'{sftp_type}_conn', value={sftp_type: sftp_conn})
-
-    return inner_dynamic_file_exchange
+    return inner_dynamic_file_exchange #allows dag to execute func
 
 def close_all_sftp_connections_task(**context):
     # Retrieve all SFTP connections from XCom
@@ -91,3 +97,9 @@ def close_all_sftp_connections(connections):
     for conn in connections.values():
         conn.close_all_connections()
     logging.info('All SFTP connections closed')
+
+
+
+# dynamic_sftp_file_exchange to inner_dynamic_file_exchange to SFTP_conn_file_exchange
+# to replicate_SFTP_file_to_local replicate_BQ_views_to_local needs to all be OOP
+#This will reduce the need for passing variables
