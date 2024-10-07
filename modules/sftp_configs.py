@@ -28,58 +28,55 @@ easyIEP_dictionary = {'TN-Options Report 2014.txt': 'TN_options_report_2014.txt'
 sftp_configs = [
     {
         'sftp_type': 'clever_import',
+        'local_sftp_type': 'iota_sftp',
         'import_or_export': 'import',
-        'target_sftp_folder_name': 'idm-sensitive-exports',
-        'local_folder_name': r'S:\SFTP\powerschool_combined', #Write directly to local SFTP on server without auth. This will need to change once deployed
-        #Also could make SFTP send legit with auth, rather than local
-
+        'target_sftp_folder_name': '/idm-sensitive-exports',
+        'local_sftp_folder_name': '/powerschool_combined', 
         'export_local_bq_replications': False,
-        'export_sftp_folder_name': None  
+        'project_id':'powerschool-420113'
     },
 
     # --------------------------------
 
     {
         'sftp_type': 'clever_export',
+        'local_sftp_type': 'iota_sftp',
         'import_or_export': 'export',
-        'target_sftp_folder_name': 'clever_iota_file_transfer',
+        'target_sftp_folder_name': '/home/boundless-calendar-0789', 
+        'local_sftp_folder_name': '/bq_replications/clever_iota_file_transfer',
         'naming_dict': clever_dictionary,
-        'local_folder_name': os.path.join(os.environ['AIRFLOW_HOME'], 'git_directory', 'TN_operations', 'bq_replications', 'clever_iota_file_transfer'),
         'db':'roster_files',
-
         'export_local_bq_replications': True,
-        'export_sftp_folder_name': '/home/boundless-calendar-0789'  
+        'project_id':'powerschool-420113'
     },
     # ----------------------------------
 
     {
         'sftp_type': 'easyIEP_import',
+        'local_sftp_type': 'iota_sftp',
         'import_or_export': 'import',
-        'target_sftp_folder_name': 'Reports',
-        'naming_dict': easyIEP_dictionary,
-        'local_folder_name': r'S:\SFTP\easyIEP_combined',  #Write directly to local SFTP on server without auth. This will need to change once deployed
-        'file_to_download': 'TN-Options Report 2014.txt',   
-
+        'target_sftp_folder_name': '/Reports',
+        'local_sftp_folder_name': '/easyIEP_combined', 
+        'file_to_download': 'TN-Options Report 2014.txt',  
+        'naming_dict': easyIEP_dictionary,  
         'export_local_bq_replications': False,
-        'export_SFTP_folder_name': None  
+        'project_id':'powerschool-420113'
     },
 
     # -------------------------------------
 
     {
         'sftp_type': 'savva_export',
+        'local_sftp_type': 'iota_sftp',
         'import_or_export': 'export',
-        'target_sftp_folder_name': 'saava_iota_file_transfer',
+        'target_sftp_folder_name': '/SIS',
+        'local_sftp_folder_name': '/bq_replications/savva_iota_file_transfer',
         'naming_dict': savva_dictionary,
         'db': 'roster_files',
-        'local_folder_name': os.path.join(os.environ['AIRFLOW_HOME'], 'git_directory', 'TN_operations', 'bq_replications', 'saava_iota_file_transfer'),
-
         'export_local_bq_replications': True, 
-        'export_sftp_folder_name': '/SIS'
+        'project_id':'powerschool-420113'
     }
      # --------------------------------
 ]
-
-
 
 

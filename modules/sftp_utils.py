@@ -1,8 +1,16 @@
 import logging
-from modules.sftp_ops import SFTPConnection, SFTP_conn_file_exchange, SFTP_export_dir_to_SFTP
 import json
 import os
+import pysftp
+from queue import Queue
+from threading import Lock
+import re
+
 from airflow.exceptions import AirflowException
+
+def clear_logging_handlers():
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
 def configure_logging():
     logging.basicConfig(
@@ -14,91 +22,113 @@ def configure_logging():
     logging.info('\n\n-------------New SFTP Operations Logging Instance')
 
 
-def load_credentials():
-    json_file_path = os.path.join(os.environ['AIRFLOW_HOME'], 'git_directory/TN_operations/powerschool-420113-db919282054b.json')
-    current_dir = os.getcwd()
-    logging.info(f"Current working directory: {current_dir}")
-    logging.info(f"JSON file path: {json_file_path}")
-    try:
-        with open(json_file_path) as json_file:
-            credentials = json.load(json_file)
-        logging.info("Credentials loaded successfully.")
-        return credentials
-    except Exception as e:
-        logging.error(f"Error loading credentials: {e}")
-        raise
+class SFTPConnection:
+    default_cnopts = pysftp.CnOpts()
+    default_cnopts.hostkeys = None
 
+    def __init__(self, host, username, password, max_connections=5, use_pool=True, cnopts=None):
+        self.host = host
+        self.username = username
+        self.password = password
+        self.max_connections = max_connections
+        self.use_pool = use_pool
+        self.cnopts = cnopts or self.default_cnopts
+        if use_pool:
+            self.pool = Queue(max_connections)
+            self.lock = Lock()
+            self._initialize_pool()
+        else:
+            self.pool = None
+            self.lock = None
 
-def setup_sftp_connection(creds, type_):
+    def _initialize_pool(self):
+        for _ in range(self.max_connections):
+            self.pool.put(self._create_new_connection())
 
-
-    if creds is None:
-        logging.error("No credentials found in XCom. Cannot establish SFTP connection.")
-        raise AirflowException("Credentials are required to establish SFTP connection.")
-
-    connections = {
-        'clever_import': SFTPConnection(creds['clever_import_host'], creds['clever_import_username'], creds['clever_import_password'], use_pool=False),
-        'clever_export': SFTPConnection(creds['clever_export_host'], creds['clever_export_username'], creds['clever_export_password'], use_pool=False),
-        'savva_export': SFTPConnection(creds['savva_host'], creds['savva_username'], creds['savva_password'], use_pool=False),
-        'easyIEP_import': SFTPConnection(creds['easyIEP_host'], creds['easyIEP_username'], creds['easyIEP_password'], use_pool=False),
-    }
-
-    if type_ not in connections:
-        raise AirflowException(f"Unknown connection type: {type_}")
-    return connections[type_]
-
-
-
-
-
-# sftp_type, import_or_export, target_sftp_folder_name, local_folder_name, db, file_to_download=None, naming_dict=None, export_local_bq_replications=False, export_sftp_folder_name=None, use_pool=False, project_id='powerschool-420113', **kwargs
-def dynamic_sftp_file_exchange(**kwargs):
-    def inner_dynamic_file_exchange(**context):
-        
-        # When Airflow runs this callable (dynamic_sftp_file_exchange), the context is automatically injected from provide_context=True.
-        ti = context['ti']
-        creds = ti.xcom_pull(task_ids='load_credentials', key='credentials')
-
-        if creds is None:
-            raise AirflowException("No credentials found in XCom.")
-        
-        sftp_type = kwargs.get('sftp_type', 'default_sftp_type')  # Retrieve sftp_type from kwargs
-        sftp_conn = setup_sftp_connection(creds, type_=sftp_type)
-
-        try:
-            SFTP_conn_file_exchange(
-                sftp_conn,
-                **kwargs
-            )
-
-        except Exception as e:
-            logging.error(f'Error during SFTP file exchange for {sftp_type} - {e}')
-        
-        try:
-            sftp_conn.close_all_connections()
-            logging.info(f'SFTP connection for {sftp_type} closed')
-        except Exception as e:
-            logging.error(f'Unable to close connection for {sftp_type} due to {e}')
-
-    return inner_dynamic_file_exchange #allows dag to execute func
-
-def close_all_sftp_connections_task(**context):
-    # Retrieve all SFTP connections from XCom
-    connections = {}
-    for task_id in context['task_instance'].dag.get_task_ids():
-        conn = context['ti'].xcom_pull(task_ids=task_id, key=f'{task_id}_conn')
-        if conn:
-            connections.update(conn)
+    def _create_new_connection(self):
+        return pysftp.Connection(
+            host=self.host,
+            username=self.username,
+            password=self.password,
+            cnopts=self.cnopts
+        )
     
-    # Call the close_all_sftp_connections function
-    close_all_sftp_connections(connections)
+    def close_connection(self, conn):
+        try:
+            conn.close()
+            logging.info('SFTP connection closed')
+        except Exception as e:
+            logging.error(f"Error closing SFTP connection: {e}")
+            raise AirflowException(f"Failed to close SFTP connection: {e}")
 
-def close_all_sftp_connections(connections):
-    for conn in connections.values():
-        conn.close_all_connections()
-    logging.info('All SFTP connections closed')
+    def get_connection(self):
+        if self.use_pool:
+            with self.lock:
+                if self.pool.empty():
+                    return self._create_new_connection()
+                return self.pool.get()
+        else:
+            return self._create_new_connection()
 
+    def return_connection(self, conn):
+        if self.use_pool:
+            with self.lock:
+                if self.pool.full():
+                    conn.close()
+                else:
+                    self.pool.put(conn)
+        else:
+            conn.close()
 
+    def close_all_connections(self):
+        if self.use_pool:
+            while not self.pool.empty():
+                conn = self.pool.get()
+                conn.close()
+                logging.info('All SFTP connections closed from the pool')
+
+    @classmethod
+    def load_credentials(cls):
+        """Loads credentials from a JSON file."""
+        json_file_path = os.path.join(os.environ['AIRFLOW_HOME'], 'git_directory/TN_operations/powerschool-420113-db919282054b.json')
+        logging.info(f"JSON file path: {json_file_path}")
+        try:
+            with open(json_file_path) as json_file:
+                credentials = json.load(json_file)
+            logging.info("Credentials loaded successfully.")
+            return credentials
+        except Exception as e:
+            logging.error(f"Error loading credentials: {e}")
+            raise AirflowException(f"Failed to load credentials: {e}")
+    
+    @classmethod
+    def setup_sftp_connection(cls, type_):
+        logging.info(f'\n\n\n\Attempting to setup SFTP connection for {type_}')
+
+        if not type_:
+            logging.info("No type provided for SFTP connection. Skipping setup.")
+            return None  # Skip connection setup if no type is provided
+
+        creds = cls.load_credentials()
+        if creds is None:
+            raise AirflowException("Credentials are required to establish SFTP connection.")
+
+        # Build connection details using a dictionary comprehension
+        connections = {
+            match.group(1): creds[key]
+            for key in creds
+            if (match := re.match(rf"{type_}_(host|username|password)", key))
+        }
+
+        # Validate the connections
+        if any(value is None for value in connections.values()):
+            logging.error(f'Invalid or incomplete credentials for {type_}: {connections}')
+            raise AirflowException("Invalid or incomplete credentials.")
+
+        # Create and return the SFTPConnection instance
+        return cls(connections['host'], connections['username'], connections['password'], use_pool=False)
+
+        
 
 # dynamic_sftp_file_exchange to inner_dynamic_file_exchange to SFTP_conn_file_exchange
 # to replicate_SFTP_file_to_local replicate_BQ_views_to_local needs to all be OOP

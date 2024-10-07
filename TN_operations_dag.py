@@ -31,21 +31,6 @@ with DAG(
     catchup=False,
 ) as dag:
 
-     # Load credentials and push to XCom 
-    def load_and_push_credentials(**context):
-        creds = load_credentials()
-        logging.info(f"Loaded credentials: {creds}")
-
-        if creds:
-            context['ti'].xcom_push(key='credentials', value=creds)
-        else:
-            logging.error("No credentials loaded. Cannot push to XCom.")
-
-    #Making callable task to be called within sftp_file_exchange_task
-    load_credentials_task = PythonOperator(
-        task_id='load_credentials',
-        python_callable=load_and_push_credentials,
-    )
 
     configure_logging_task = PythonOperator(
     task_id='configure_logging',
@@ -60,17 +45,16 @@ with DAG(
 
         sftp_file_exchange_task = PythonOperator(
             task_id=task_id,
-            python_callable=dynamic_sftp_file_exchange(**config),
-            provide_context=True
+            python_callable=SFTP_conn_file_exchange, #pass in entire dict
+            provide_context=True,
+            op_kwargs=config
         )
 
         #Task dependencies
-        configure_logging_task >> load_credentials_task >> sftp_file_exchange_task
+        configure_logging_task >> sftp_file_exchange_task
 
 
 
-#Can not let bars be green if conn is not established. 
-#issue querying savvas. Need to specify the db if it does not hava  default
 
 
 

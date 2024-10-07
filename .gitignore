@@ -9,16 +9,3 @@ SFTP_folders
 bq_replications/
 clever_iota_file_transfer/
 savva_iota_file_transfer/
-
-# These are still in root
-#Issue lies in here replicate_SFTP_file_to_local
-#This needs to be legit SFTP send, not local send. Will require modifying configs further to access SFTP
-
-# S:\SFTP\easyIEP_combined
-# S:\SFTP\powerschool_combined
-
-#Other improvements call for catching airflow exceptions
-#Implementing object oriented programming to move away from double loop, and sftp_configs. 
-#Make it class based
-
-#Specify in object instantitaions or sftp_configs what each is used for

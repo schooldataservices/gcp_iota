@@ -4,209 +4,202 @@ import pysftp
 import logging
 import time
 import os
-from queue import Queue
-from threading import Lock
+import io
+from airflow.exceptions import AirflowException
+from .sftp_utils import *
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 
-def clear_logging_handlers():
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
 
+def SFTP_conn_file_exchange(**kwargs):
+    conn = None #For loops being as none
 
-class SFTPConnection:
-    default_cnopts = pysftp.CnOpts()
-    default_cnopts.hostkeys = None
-
-    def __init__(self, host, username, password, max_connections=5, use_pool=True, cnopts=None):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.max_connections = max_connections
-        self.use_pool = use_pool
-        self.cnopts = cnopts or self.default_cnopts
-        if use_pool:
-            self.pool = Queue(max_connections)
-            self.lock = Lock()
-            self._initialize_pool()
-        else:
-            self.pool = None
-            self.lock = None
-
-    def _initialize_pool(self):
-        for _ in range(self.max_connections):
-            self.pool.put(self._create_new_connection())
-
-    def _create_new_connection(self):
-        return pysftp.Connection(
-            host=self.host,
-            username=self.username,
-            password=self.password,
-            cnopts=self.cnopts
-        )
-
-    def get_connection(self):
-        if self.use_pool:
-            with self.lock:
-                if self.pool.empty():
-                    return self._create_new_connection()
-                return self.pool.get()
-        else:
-            return self._create_new_connection()
-
-    def return_connection(self, conn):
-        if self.use_pool:
-            with self.lock:
-                if self.pool.full():
-                    conn.close()
-                else:
-                    self.pool.put(conn)
-        else:
-            conn.close()
-
-    def close_all_connections(self):
-        if self.use_pool:
-            while not self.pool.empty():
-                conn = self.pool.get()
-                conn.close()
-                logging.info('SFTP connection closed')
-
-
-
-
-
-def replicate_SFTP_file_to_local(sftp_conn, sftp_folder_name, local_folder_name, file_to_download=None, naming_dict=None):
-    os.makedirs(local_folder_name, exist_ok=True)
-
-    try:
-        sftp_conn.chdir(sftp_folder_name)
-        dir_contents = sftp_conn.listdir()
-        logging.info(f'Dir contents of {sftp_folder_name}: {dir_contents}')
-
-        if file_to_download:
-            if file_to_download in dir_contents:
-                remote_file_path = os.path.join(sftp_folder_name, file_to_download)
-
-                #reform local_file_path specifically for easyIEP. Singular file rename that references the dictionary passed in
-                dict_name = naming_dict.get(file_to_download)
-
-                local_file_path = os.path.join(local_folder_name, dict_name)
-
-                logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
-
-                sftp_conn.get(file_to_download, local_file_path)
-                logging.info(f'File "{file_to_download}" downloaded to local directory "{local_file_path}"')
-            else:
-                logging.warning(f'File "{file_to_download}" not found in directory "{sftp_folder_name}".')
-        else:
-            if not dir_contents:
-                logging.info(f'No files to download in folder "{sftp_folder_name}".')
-                return
-
-            logging.info('No specification for file_to_download as a standalone, assuming all files need to be downloaded')
-
-            for file_name in dir_contents:
-                remote_file_path = os.path.join(sftp_folder_name, file_name)
-                local_file_path = os.path.join(local_folder_name, file_name)
-
-                logging.info(f'Trying to download remote file: {remote_file_path} to local path: {local_file_path}')
-
-                sftp_conn.get(file_name, local_file_path)
-                logging.info(f'File "{file_name}" downloaded to local directory "{local_file_path}"')
-
-            logging.info(f'All files in folder "{sftp_folder_name}" downloaded to local directory "{local_folder_name}"')
-
-    except Exception as e:
-        logging.error(f'An error occurred during file replication: {e}')
-
-
-
-
-
-def SFTP_conn_file_exchange(sftp_conn, **kwargs):
-    conn = None #For loops
-
-  
     # Access parameters using kwargs.get()
-    import_or_export = kwargs.get('import_or_export')
-    target_sftp_folder_name = kwargs.get('target_sftp_folder_name')
-    local_folder_name = kwargs.get('local_folder_name', None)
+    sftp_type = kwargs.get('sftp_type', None) 
+    local_sftp_type = kwargs.get('local_sftp_type', None)
+    import_or_export = kwargs.get('import_or_export', None)
+    target_sftp_folder_name = kwargs.get('target_sftp_folder_name', None)
+    local_sftp_folder_name = kwargs.get('local_sftp_folder_name', None)
     file_to_download = kwargs.get('file_to_download', None)
     use_pool = kwargs.get('use_pool', False)
     naming_dict = kwargs.get('naming_dict', None)
     db = kwargs.get('db', None)
     export_local_bq_replications = kwargs.get('export_local_bq_replications', None)
-    export_sftp_folder_name = kwargs.get('export_sftp_folder_name', None)
-    project_id = 'powerschool-420113'
+    project_id = kwargs.get('project_id', None)
 
     # Logging for debugging
+    logging.info(f"sftp_type: {sftp_type}")
+    logging.info(f"local_sftp_type: {local_sftp_type}")
     logging.info(f"import_or_export: {import_or_export}")
     logging.info(f"target_sftp_folder_name: {target_sftp_folder_name}")
-    logging.info(f"local_folder_name: {local_folder_name}")
+    logging.info(f"local_sftp_folder_name: {local_sftp_folder_name}")
     logging.info(f"file_to_download: {file_to_download}")
     logging.info(f"use_pool: {use_pool}")
     logging.info(f"naming_dict: {naming_dict}")
     logging.info(f"db: {db}")
     logging.info(f"export_local_bq_replications: {export_local_bq_replications}")
-    logging.info(f"export_sftp_folder_name: {export_sftp_folder_name}")
     logging.info(f"use_pool: {use_pool}")
     logging.info(f"project_id: {project_id}")
 
+
+    #specific conns retrieved
+    sftp_conn_obj = SFTPConnection.setup_sftp_connection(type_=sftp_type)
+    sftp_conn = sftp_conn_obj.get_connection()
+    logging.info(f'\n\n\nSFTP singular connection established successfully for {sftp_type}')
+  
+    sftp_conn_local_obj = SFTPConnection.setup_sftp_connection(type_=local_sftp_type)
+    sftp_conn_local = sftp_conn_local_obj.get_connection()
+    logging.info(f'\n\n\nSFTP singular connection established successfully for {local_sftp_type}')
+
+                    
+    #Bring in local bq replications to local_sftp before sending to vendor
+    if export_local_bq_replications:
+        logging.info('Attempting to replicate BQ views to local prior to exporting them out')
+        replicate_BQ_views_to_local(sftp_conn_local, 
+                                    local_sftp_folder_name, 
+                                    project_id, 
+                                    db, 
+                                    naming_dict) 
+        
+    
+            
+    # Call the SFTP file transfer function
+    SFTP_file_transfer(
+        import_or_export=import_or_export,
+        sftp_conn=sftp_conn,
+        sftp_conn_local=sftp_conn_local,
+        sftp_type=sftp_type,
+        target_sftp_folder_name=target_sftp_folder_name,
+        local_sftp_folder_name=local_sftp_folder_name,
+        singular_file=file_to_download,
+        naming_dict=naming_dict
+    )
+
+    # finally:
     try:
-        if use_pool:
-            conn = sftp_conn.get_connection()
-            logging.info('\n\n\nSFTP connection established successfully from pool')
-        else:
-            logging.info(f'\n\n\nAttempting to create new connection')
-            conn = sftp_conn._create_new_connection()
-            logging.info('SFTP singular connection established successfully within SFTP_conn_file_exchange')
-
-           # import pulls over google passwords from Clever, export sends GCP views over
-        if import_or_export == 'import':
-            logging.info('Attempting to replicate SFTP file to local')
-            replicate_SFTP_file_to_local(conn, target_sftp_folder_name, local_folder_name, file_to_download, naming_dict)
-
-        elif import_or_export == 'export':
-            logging.info('Attempting to replicate BQ views to local')
-            replicate_BQ_views_to_local(local_folder_name, project_id, db, naming_dict)  
-        else:
-            logging.error('Wrong variable for import or export')
-
-        # If true, and folder specified. Currently only for Savva and clever exports
-        if export_local_bq_replications and export_sftp_folder_name is not None:
-            try:
-                logging.info(f'Attempting to export local bq replications to {export_sftp_folder_name}')
-                SFTP_export_dir_to_SFTP(local_folder_name, export_sftp_folder_name, sftp=sftp_conn)
-            except Exception as e:
-                logging.error(f'Error during SFTP_export_dir_to_SFTP as {e}')
-        else:
-            logging.info(f'export_local_bq_replications value of {export_local_bq_replications} and export_sftp_folder_name value of {export_sftp_folder_name} preventing the SFTP_export_dir_to_SFTP function from being triggered')
-    
+        sftp_conn_obj.close_connection(sftp_conn)
+        logging.info(f'SFTP connection for {sftp_type} closed')
+        sftp_conn_local_obj.close_connection(sftp_conn_local)
+        logging.info(f'SFTP connection for {local_sftp_type} closed')
     except Exception as e:
-        logging.error(f'Process failed due to error: {e}')   
+        logging.error(f'Unable to close connection for {sftp_type} or {local_sftp_type} due to {e}')
 
-    finally:
-        if conn:
-            if use_pool:
-                sftp_conn.return_connection(conn)  # Return the connection to the pool
-                logging.info('SFTP connection returned to pool')
-            else:
-                conn.close()
-                logging.info('SFTP singular connection closed')
+# ---------------------------------------------------------
 
 
+def ensure_sftp_directory_exists(sftp_conn_destination, local_sftp_folder_name):
+    folder_name = local_sftp_folder_name.rstrip('/')  # Remove trailing slash if any
+    try:
+        sftp_conn_destination.chdir(folder_name)
+        logging.info(f'Directory "{folder_name}" already exists on the SFTP server.')
+    except IOError:
+        logging.info(f'Directory "{folder_name}" does not exist. Attempting to create it.')
+        sftp_conn_destination.makedirs(folder_name)
+        logging.info(f'Directory "{folder_name}" was created successfully.')
 
 
 
-def replicate_BQ_views_to_local(local_folder_name, project_id, db, naming_dict):
-    """
-    Function to send files to SFTP server from BigQuery tables.
+def transfer_file(sftp_conn_source, sftp_conn_destination, source_file_path, destination_file_path):
+    """Helper function to transfer a single file."""
+    # Ensure source file path is valid
+    if not source_file_path:
+        logging.error(f'Source path "{source_file_path}" does not exist or is invalid.')
+        raise AirflowException(f'Source path "{source_file_path}" does not exist or is invalid.')
+
+    # Open the file on the destination SFTP server for writing
+    with sftp_conn_destination.open(destination_file_path, 'wb') as destination_file:
+        # Download the file from the source and write it to the destination
+        sftp_conn_source.getfo(source_file_path, destination_file)
+        logging.info(f'File "{source_file_path}" successfully transferred to "{destination_file_path}".')
+
+
+
+def SFTP_file_transfer(import_or_export, sftp_conn, sftp_conn_local, sftp_type, target_sftp_folder_name, local_sftp_folder_name, singular_file=None, naming_dict=None):
+
+
+    # Set the source and destination connections based on import_or_export value
+    if import_or_export == 'import':
+        logging.info(f'Attempting to import SFTP files to local for {sftp_type}')
+        sftp_conn_source = sftp_conn                      # Remote SFTP as the source
+        sftp_conn_destination = sftp_conn_local           # Local SFTP as the destination
+        source_fldr = target_sftp_folder_name
+        destination_fldr = local_sftp_folder_name
+
+    elif import_or_export == 'export':
+        logging.info(f'Attempting to export SFTP files to remote for {sftp_type}')
+        sftp_conn_source = sftp_conn_local                # Local SFTP as the source
+        sftp_conn_destination = sftp_conn                 # Remote SFTP as the destination
+        source_fldr = local_sftp_folder_name
+        destination_fldr = target_sftp_folder_name
+    else:
+        raise ValueError(f'Invalid value for import_or_export: {import_or_export}')
+
+    logging.info(f'source_fldr: {source_fldr}')
+    logging.info(f'destination_fldr: {destination_fldr}')
     
-    Parameters:
-    - sftp: pysftp.Connection object for SFTP connection.
-    - dictionary_naming: Dictionary mapping table names to remote filenames.
-    - sftp_folder_name: Remote folder name on SFTP server.
-    - project_id: Google Cloud project ID for BigQuery.
+    # Ensure destination directory exists
+    ensure_sftp_directory_exists(sftp_conn_destination, destination_fldr)
+
+    try:
+        logging.info(f'Navigating to destination folder "{destination_fldr}" for the {import_or_export} on {sftp_type} to ensure landing spot')
+
+        sftp_conn_source.chdir(source_fldr)
+        dir_contents = sftp_conn_source.listdir()
+        logging.info(f'Dir contents of {source_fldr} for the {import_or_export} of {sftp_type}: {dir_contents}')
+        
+        if not dir_contents:
+            logging.info(f'No files to download in folder for "{source_fldr}".')
+            return
+
+        # Handle singular file transfer
+        if singular_file:
+            if singular_file in dir_contents:
+                dict_name = naming_dict.get(singular_file)
+                source_file_path = os.path.join(source_fldr, singular_file)
+                destination_file_path = os.path.join(destination_fldr, dict_name)
+                logging.info(f'Starting singular file transfer: "{singular_file}" -> "{destination_file_path}".')
+                transfer_file(sftp_conn_source, sftp_conn_destination, source_file_path, destination_file_path)
+                logging.info(f'Successfully transferred file "{singular_file}" to "{destination_file_path}".')
+            else:
+                logging.error(f'File "{singular_file}" not found in directory "{target_sftp_folder_name}".')
+                raise AirflowException(f'File "{singular_file}" not found.')
+
+        else:
+            # Handle batch file transfer
+            logging.info(f'No specification for file_to_download variable, assuming all files need to be transferred from {source_fldr}')
+            for file_name in dir_contents:
+                source_file_path = os.path.join(source_fldr, file_name)
+                destination_file_path = os.path.join(destination_fldr, file_name)
+                logging.info(f'Transferring file "{file_name}" to "{destination_file_path}".')
+                transfer_file(sftp_conn_source, sftp_conn_destination, source_file_path, destination_file_path)
+                logging.info(f'Successfully transferred file "{file_name}" to "{destination_file_path}".')
+
+            logging.info(f'All files in folder "{source_fldr}" transferred to destination SFTP.')
+
+    except IOError as e:
+        logging.error(f'IOError occurred while accessing "{source_fldr}" or transferring files: {e}')
+        raise AirflowException(f'Error during SFTP operation: {e}')
+
+    except Exception as e:
+        logging.error(f'An error occurred during file replication {singular_file} attempt to {destination_fldr}: {e}')
+        raise AirflowException
+    
+    logging.info(f'Finished SFTP file transfer from "{source_fldr}" to "{destination_fldr}')
+
+
+
+
+def replicate_BQ_views_to_local(sftp_conn_local, local_sftp_folder_name, project_id, db, naming_dict):
+    
+    """
+        Function to send BigQuery table data directly to an SFTP server.
+
+        Parameters:
+        - conn: pysftp.Connection object for SFTP connection.
+        - sftp_folder_name: Remote folder name on the SFTP server.
+        - project_id: Google Cloud project ID for BigQuery.
+        - db: BigQuery database name.
+        - naming_dict: Dictionary mapping BigQuery table names to remote filenames.
     """
 
     # Iterate over dictionary of table names and filenames
@@ -220,68 +213,32 @@ def replicate_BQ_views_to_local(local_folder_name, project_id, db, naming_dict):
             logging.info(f'Reading {query} from BQ')
         except Exception as e:
             logging.error(f'Error querying table "{table_name}": {str(e)}')
-            continue
+            raise AirflowException
+
+        buffer = io.StringIO()
+        try:
+            df.to_csv(buffer, index=False) #df in memory
+            buffer.seek(0)  #reset buffer position for loop
+            logging.info(f"Big Query table - {table_name} written to in-memory buffer.")
+        except Exception as e:
+            logging.error(f"Failed to write Big Query table - {table_name} to buffer: {str(e)}")
+            raise AirflowException
         
-        # Create nested folder based on sftp_folder_name
+        #Ensure directory exists on local SFTP before writing
+        ensure_sftp_directory_exists(sftp_conn_local, local_sftp_folder_name)
+
+        # Send the file to the SFTP server
         try:
-            # Check if directory exists before trying to create it
-            if not os.path.exists(local_folder_name):
-                os.makedirs(local_folder_name)
-                logging.info(f'Directory {local_folder_name} was created for the first time.')
-            else:
-                logging.info(f'Directory {local_folder_name} already exists.')
+            remote_path = f"{local_sftp_folder_name}/{remote_filename}"
+            with sftp_conn_local.open(remote_path, 'w') as remote_file:
+                remote_file.write(buffer.getvalue())  # Write buffer content to SFTP server
+            logging.info(f"Successfully replicated Big Query table {remote_filename} to SFTP server at {remote_path}.")
         except Exception as e:
-            logging.error(f'Unable to create {local_folder_name} due to {str(e)}')
-
-  
-        # Write files to local dir
-        local_path = os.path.join(local_folder_name, remote_filename)
-        try:
-            df.to_csv(local_path, index=False)
-            logging.info(f'Big Query table - {table_name} being replicated to local dir {local_path}')
-        except Exception as e:
-            logging.error(f'Big Query table - {table_name} unable to be replicated to local dir {local_path}: {str(e)}')
-            
+            logging.error(f"Error replicating {remote_filename} Big Query table to SFTP {remote_path}: {str(e)}")
+            raise AirflowException
 
 
-
-def SFTP_export_dir_to_SFTP(local_folder_name, export_sftp_folder_name, sftp):
-    conn = sftp._create_new_connection()
-    logging.info('\n\n\nSFTP singular connection established successfully')
-
-    #test if local_folder_name has files first
-    if not os.listdir(local_folder_name):  # Check if the folder is empty
-        logging.warning(f'The local folder {local_folder_name} is empty. No files to export to {export_sftp_folder_name}')
-        return
-
-    for root, _, files in os.walk(local_folder_name):
-        for file in files:
-            local_path = os.path.join(root, file)
-            relative_path = os.path.relpath(local_path, local_folder_name)
-            remote_path = os.path.join(export_sftp_folder_name, relative_path).replace('\\', '/')
+        
 
 
-            # Log paths for debugging
-            logging.info(f"Local path: {local_path}")
-            logging.info(f"Remote path: {remote_path}")
-
-            # Check if the file exists
-            if not os.path.exists(local_path):
-                logging.error(f"File not found: {local_path}")
-                continue
-
-            # Upload the file
-            try:
-                conn.put(local_path, remote_path)
-                logging.info(f"Uploaded {local_path} to {remote_path}")
-            except Exception as e:
-                logging.error(f"Error uploading {local_path} to {remote_path}: {str(e)}")
-
-    # Close the connection after the operation
-    conn.close()
-    logging.info('SFTP singular connection closed')
-
-
-
-#This can benefit from OOP
 
