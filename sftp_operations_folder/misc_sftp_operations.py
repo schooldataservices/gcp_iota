@@ -63,6 +63,12 @@ SFTP_conn_file_exchange(sftp_conn_iep,
                         use_pool=False)
 
 
+#Copy over latest SAVVAS Assessment Scores to misc_imports
+copy_newest_savvas_file(source_dir = r"S:\SFTP\savvas", 
+                        target_dir = r"S:\SFTP\misc_imports",
+                        filename='SAVVAS_Realize_Assessment_Scores.csv')
+
+
 sftp_conn_clever_import.close_all_connections()
 sftp_conn_iep.close_all_connections()
 logging.info('Process has reached the end')

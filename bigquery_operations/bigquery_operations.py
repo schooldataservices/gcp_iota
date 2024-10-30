@@ -50,3 +50,7 @@ logging.info('Process has reached the end\n\n')
 
 #Fix indentation of the logs
 #Implement new SFTP module
+
+#Remove this from being tracking
+# Remove pycache
+# sftp_operations_folder/file_transfers/local_iota_file_transfer

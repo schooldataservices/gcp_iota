@@ -8,3 +8,5 @@ local_file.txt
 SFTP_folders
 clever_iota_file_transfer/
 savva_iota_file_transfer/
+__pycache__
+sftp_operations_folder/file_transfers/local_iota_file_transfer

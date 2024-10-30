@@ -1,0 +1,15 @@
+C:\Users\amy.hardy\AppData\Roaming\Python\Python312\site-packages\pysftp\__init__.py:61: UserWarning: Failed to load HostKeys from C:\Users\amy.hardy\.ssh\known_hosts.  You will need to explicitly load HostKeys (cnopts.hostkeys.load(filename)) or disableHostKey checking (cnopts.hostkeys = None).
+  warnings.warn(wmsg, UserWarning)
+Trying to download remote file: idm-sensitive-exports\google-powerschool-students-passwords.csv to local path: S:\SFTP\misc_imports\google-powerschool-students-passwords.csv
+Trying to download remote file: idm-sensitive-exports\google-students-passwords.csv to local path: S:\SFTP\misc_imports\google-students-passwords.csv
+Trying to download remote file: Reports\TN-Options Report 2014.txt to local path: S:\SFTP\misc_imports\TN_options_report_2014.txt
+Traceback (most recent call last):
+  File "C:\Users\amy.hardy\Desktop\Python_Scripts\Google_Cloud\sftp_operations_folder\misc_sftp_operations.py", line 67, in <module>
+    copy_newest_savvas_file(source_directory = r"S:\SFTP\savvas", 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: copy_newest_savvas_file() got an unexpected keyword argument 'source_directory'
+C:\Users\amy.hardy\AppData\Roaming\Python\Python312\site-packages\pysftp\__init__.py:61: UserWarning: Failed to load HostKeys from C:\Users\amy.hardy\.ssh\known_hosts.  You will need to explicitly load HostKeys (cnopts.hostkeys.load(filename)) or disableHostKey checking (cnopts.hostkeys = None).
+  warnings.warn(wmsg, UserWarning)
+Trying to download remote file: idm-sensitive-exports\google-powerschool-students-passwords.csv to local path: S:\SFTP\misc_imports\google-powerschool-students-passwords.csv
+Trying to download remote file: idm-sensitive-exports\google-students-passwords.csv to local path: S:\SFTP\misc_imports\google-students-passwords.csv
+Trying to download remote file: Reports\TN-Options Report 2014.txt to local path: S:\SFTP\misc_imports\TN_options_report_2014.txt

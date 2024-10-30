@@ -1,2 +1,0 @@
-student_number,dcid,import_email,import_pw
-4173695,14255,abirdsong4173695@iotaschools.org,xxxxx

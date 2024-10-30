@@ -1,6 +1,7 @@
 import pandas as pd
 import pandas_gbq
 import pysftp
+import shutil
 import logging
 import time
 import os
@@ -241,74 +242,25 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
     conn.close()
     logging.info('SFTP singular connection closed')
 
-# def main():
-#     local_dir = '/path/to/local/directory'
-#     remote_dir = '/path/to/remote/directory'
-#     host = 'your_remote_host'
-#     username = 'your_username'
-#     password = 'your_password'
 
 
-#         sftp_copy_dir(local_dir, remote_dir, sftp)
+def copy_newest_savvas_file(source_dir, target_dir, filename):
+    # Check if source and target directories exist
+    if not os.path.exists(source_dir):
+        raise FileNotFoundError(f"Source directory '{source_dir}' does not exist.")
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
 
-# if __name__ == "__main__":
-#     main()
+    # Get list of all files in the source directory
+    files = [os.path.join(source_dir, f) for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f))]
 
+    # Find the most recent file by modification time
+    if not files:
+        raise FileNotFoundError("No files found in the source directory.")
+    newest_file = max(files, key=os.path.getmtime)
 
+    new_file_path = os.path.join(target_dir, filename)
 
-
-
-
-
-
-
-#SSH tunneling example for CustomPlanet
-# from sshtunnel import SSHTunnelForwarder
-# import pymysql
-
-# # Establish SSH tunnel
-# with SSHTunnelForwarder(
-#     (ssh_host, ssh_port),
-#     ssh_username=ssh_username,
-#     ssh_password=ssh_password,
-#     remote_bind_address=(mysql_host, mysql_port),
-# ) as tunnel:
-#     print(f'Tunnel local bind port: {tunnel.local_bind_port}')
-#     print(f'Tunnel is active: {tunnel.is_active}')
-
-#     # Connect to MySQL through the tunnel
-#     conn = pymysql.connect(
-#         host=mysql_host,
-#         port=tunnel.local_bind_port,
-#         user=mysql_username,
-#         password=mysql_password,
-#         database='opencartdb',
-#         connect_timeout=30,  # Increase the connection timeout
-#     )
-
-#     orders = '''
-#             SELECT order_id, firstname, lastname, email, telephone, payment_city, payment_zone, payment_country, payment_method, 
-#             shipping_address_1, shipping_city, shipping_country, total, date_added, date_modified, design_file,
-#             shipping_date FROM oc_order
-#             '''
-    
-#     order_product = '''
-#             SELECT order_product_id, order_id, product_id, name, model, quantity, price, total FROM oc_order_product
-
-#                      '''
-    
-#     just_product = '''
-#             SELECT product_id, what, image FROM oc_product
-
-#     '''    
-    
-
-#     orders = pd.read_sql_query(orders, conn)
-#     order_product = pd.read_sql_query(order_product, conn)
-#     just_product = pd.read_sql_query(just_product, conn)
-
-#     try:
-#         conn.close()
-#         print('conn is closed')
-#     except:
-#         print('conn still open')
+    # Copy the newest file to the target directory with the new name
+    shutil.copy2(newest_file, new_file_path)
+    logging.info(f"Copied '{newest_file}' to '{new_file_path}'.")
