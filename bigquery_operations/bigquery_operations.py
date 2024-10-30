@@ -54,3 +54,4 @@ logging.info('Process has reached the end\n\n')
 #Remove this from being tracking
 # Remove pycache
 # sftp_operations_folder/file_transfers/local_iota_file_transfer
+# bigquery_operations/output.txt

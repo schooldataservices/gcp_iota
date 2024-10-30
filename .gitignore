@@ -6,7 +6,6 @@ local_file.txt
 *.log
 *.pyc
 SFTP_folders
-clever_iota_file_transfer/
-savva_iota_file_transfer/
+file_transfers/
 __pycache__
 sftp_operations_folder/file_transfers/local_iota_file_transfer

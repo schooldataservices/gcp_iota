@@ -19,6 +19,9 @@ with open('../powerschool-420113-db919282054b.json') as json_file:
     clever_export_password = j['clever_export_password']
     clever_export_username = j['clever_export_username']
     clever_export_host = j['clever_export_host']
+    ellevation_sftp_host = j['ellevation_sftp_host']
+    ellevation_sftp_username = j['ellevation_sftp_username']
+    ellevation_sftp_password =  j['ellevation_sftp_password']
 
 
 
@@ -44,58 +47,87 @@ savva_dictionary = {
                     'SAVVAS_ASSIGNMENT': 'ASSIGNMENT.txt'
                 }
 
+ellevation_dictionary = {
+                         'Ellevation_Staff-Roster' : 'Staff-Roster.csv', 
+                         'Ellevation_Student-Course-Schedules':'Student-Course-Schedules.csv',
+                         'Ellevation_Student-Demographics':'Student-Demographics.csv'
+                        }
 
 
-sftp_conn_clever_export = SFTPConnection(
-    host=clever_export_host,
-    username=clever_export_username,
-    password=clever_export_password,
+# sftp_conn_clever_export = SFTPConnection(
+#     host=clever_export_host,
+#     username=clever_export_username,
+#     password=clever_export_password,
+#     use_pool=False
+# )
+
+# #Export BQ views to local dir for Clever. Follow naming convention of dictionary arg. 
+# SFTP_conn_file_exchange(sftp_conn_clever_export,
+#                         import_or_export = 'export',
+#                         sftp_folder_name='file_transfers\clever_iota_file_transfer', 
+#                         db='roster_files',
+#                         naming_dict = clever_dictionary,
+#                         use_pool=False,
+#                         )
+
+# # Export the local replicated files to Clevers SFTP
+# SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\clever_iota_file_transfer',
+#                remote_dir='/home/boundless-calendar-0789',  
+#                sftp = sftp_conn_clever_export)
+
+# ------------------------------Ellevation Piece ----------------------------------------------------
+
+sftp_conn_ellevation_export = SFTPConnection(
+    host=ellevation_sftp_host,
+    username=ellevation_sftp_username,
+    password=ellevation_sftp_password,
     use_pool=False
 )
 
-#Export BQ views to local dir. Follow naming convention of dictionary arg. 
-SFTP_conn_file_exchange(sftp_conn_clever_export,
+
+#Export BQ views to local dir for Ellevation. Follow naming convention of dictionary arg. 
+SFTP_conn_file_exchange(sftp_conn_ellevation_export,
                         import_or_export = 'export',
-                        sftp_folder_name='clever_iota_file_transfer', 
+                        sftp_folder_name='file_transfers\ellevation_iota_file_transfer', 
                         db='roster_files',
-                        naming_dict = clever_dictionary,
+                        naming_dict = ellevation_dictionary,
                         use_pool=False,
                         )
 
 # Export the local replicated files to Clevers SFTP
-SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\clever_iota_file_transfer',
-               remote_dir='/home/boundless-calendar-0789',  #root dir on clevers sftp
-               sftp = sftp_conn_clever_export)
-
+SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\ellevation_iota_file_transfer',
+               remote_dir='/data', 
+               sftp = sftp_conn_ellevation_export)
 
 # ----------------------------SAVVA piece-----------------------------------
 
-sftp_conn_savva = SFTPConnection(
-    host=savva_host,
-    username=savva_username,
-    password=savva_password,
-    use_pool=False
-)
+# sftp_conn_savva = SFTPConnection(
+#     host=savva_host,
+#     username=savva_username,
+#     password=savva_password,
+#     use_pool=False
+# )
 
 
-#Export replicates BQ views to local dir. Follow naming convention as dictionary arg. 
-SFTP_conn_file_exchange(sftp_conn_savva,
-                        import_or_export = 'export',
-                        sftp_folder_name='savva_iota_file_transfer', 
-                        db='roster_files',
-                        naming_dict = savva_dictionary,
-                        use_pool=False
-                        )
+# #Export replicates BQ views to local dir. Follow naming convention as dictionary arg. 
+# SFTP_conn_file_exchange(sftp_conn_savva,
+#                         import_or_export = 'export',
+#                         sftp_folder_name='file_transfers\savva_iota_file_transfer', 
+#                         db='roster_files',
+#                         naming_dict = savva_dictionary,
+#                         use_pool=False
+#                         )
 
-#Sends local files over the SAVVAS sftp SIS folder
-SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\savva_iota_file_transfer',
-               remote_dir='/SIS',  #root dir on clevers sftp
-               sftp = sftp_conn_savva)
+# #Sends local files over the SAVVAS sftp SIS folder
+# SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\savva_iota_file_transfer',
+#                remote_dir='/SIS',  #root dir on clevers sftp
+#                sftp = sftp_conn_savva)
 
 
 
 sftp_conn_clever_export.close_all_connections()
 sftp_conn_savva.close_all_connections()
+sftp_conn_ellevation_export.close_all_connections()
 logging.info('Process has reached the end')
 
 
