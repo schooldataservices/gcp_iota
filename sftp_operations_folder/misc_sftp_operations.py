@@ -22,8 +22,8 @@ with open('../powerschool-420113-db919282054b.json') as json_file:
     easyIEP_host = j['easyIEP_host']
 
 
-#All BQ tables that are begin queryed are the keys. 
-#How they are saved in the local dir are the values
+# All BQ tables that are begin queryed are the keys. 
+# How they are saved in the local dir are the values
 easyIEP_dictionary = {'TN-Options Report 2014.txt': 'TN_options_report_2014.txt'}
 
 
@@ -62,13 +62,25 @@ SFTP_conn_file_exchange(sftp_conn_iep,
                         file_to_download='TN-Options Report 2014.txt',
                         use_pool=False)
 
+# ----------------------------SAVVAS Replication to misc_import and otus_iota_file_transfer-----------------------------------
 
-#Copy over latest SAVVAS Assessment Scores to misc_imports
-copy_newest_savvas_file(source_dir = r"S:\SFTP\savvas", 
+#Copy over the two latest SAVVAS files to misc_imports and to \\file_transfers\otus_iota_file_transfer
+file_prefixes = {
+    "SAVVAS_Realize_Assessment_Scores": "SAVVAS_Realize_Assessment_Scores.csv",
+    "SAVVAS_Realize_Standards_Scores": "SAVVAS_Realize_Standards_Scores.csv"
+}
+
+copy_newest_savvas_files(source_dir = r"S:\SFTP\savvas", 
                         target_dir = r"S:\SFTP\misc_imports",
-                        filename='SAVVAS_Realize_Assessment_Scores.csv')
+                        file_prefixes=file_prefixes)
+
+copy_newest_savvas_files(source_dir = r"S:\SFTP\savvas", 
+                        target_dir = r"C:\Users\amy.hardy\Desktop\Python_Scripts\Google_Cloud\sftp_operations_folder\file_transfers\otus_iota_file_transfer",
+                        file_prefixes=file_prefixes)
 
 
 sftp_conn_clever_import.close_all_connections()
 sftp_conn_iep.close_all_connections()
 logging.info('Process has reached the end')
+
+

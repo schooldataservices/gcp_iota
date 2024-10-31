@@ -244,23 +244,41 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
 
 
 
-def copy_newest_savvas_file(source_dir, target_dir, filename):
+
+def copy_newest_savvas_files(source_dir, target_dir, file_prefixes):
+    """
+    Copies the newest files that start with specific prefixes from the source directory to the target directory.
+
+    :param source_dir: Directory to search for files.
+    :param target_dir: Directory to copy the files to.
+    :param file_info: A dictionary with keys as file prefixes and values as destination filenames.
+    """
     # Check if source and target directories exist
     if not os.path.exists(source_dir):
+        logging.error(f"Source directory '{source_dir}' does not exist.")
         raise FileNotFoundError(f"Source directory '{source_dir}' does not exist.")
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
+        logging.info(f'Creating {target_dir} for the first time')
 
-    # Get list of all files in the source directory
-    files = [os.path.join(source_dir, f) for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f))]
+    # Loop through each prefix and destination filename in file_info
+    for prefix, filename in file_prefixes.items():
+        # Find all files that start with the specified prefix
+        files_with_prefix = [
+            os.path.join(source_dir, f) for f in os.listdir(source_dir)
+            if os.path.isfile(os.path.join(source_dir, f)) and f.startswith(prefix)
+        ]
+        
+        # Find the most recent file for the current prefix
+        if not files_with_prefix:
+            logging.error(f"No files found in the source directory with prefix '{prefix}'.")
+            raise FileNotFoundError(f"No files found in the source directory with prefix '{prefix}'.")
+        
+        newest_file = max(files_with_prefix, key=os.path.getmtime)
+        new_file_path = os.path.join(target_dir, filename)
 
-    # Find the most recent file by modification time
-    if not files:
-        raise FileNotFoundError("No files found in the source directory.")
-    newest_file = max(files, key=os.path.getmtime)
+        # Copy the newest file to the target directory with the specified filename
+        shutil.copy2(newest_file, new_file_path)
+        logging.info(f"Copied '{newest_file}' to '{new_file_path}'.")
 
-    new_file_path = os.path.join(target_dir, filename)
 
-    # Copy the newest file to the target directory with the new name
-    shutil.copy2(newest_file, new_file_path)
-    logging.info(f"Copied '{newest_file}' to '{new_file_path}'.")

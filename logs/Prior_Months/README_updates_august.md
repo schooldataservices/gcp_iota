@@ -1,5 +1,4 @@
 ### Project Summary:
-- 6 hours x $65 rate = $390 
 
 **Objective**: Alter python processes to move all automated buckets, and table creation to new region as us-central1. 
 Incorporate EasyIEP SFTP transfer to Google Cloud Population.
