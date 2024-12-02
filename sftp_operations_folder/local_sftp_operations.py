@@ -22,7 +22,13 @@ with open('../powerschool-420113-db919282054b.json') as json_file:
 #All BQ tables that are begin queryed are the keys. 
 #How they are saved in the local dir are the values
 iota_dictionary = {'GoogleForPSImport_ASD':'GoogleForPSImport_ASD.txt',
-                    'GoogleForPSImport_TPCSC':'GoogleForPSImport_TPCSC.txt'}
+                    'GoogleForPSImport_TPCSC':'GoogleForPSImport_TPCSC.txt',
+                    'IEP_Import_ASD': 'IEP_Import_ASD.txt',
+                    'RTI_ASD': 'RTI_ASD.txt',
+                    'RTI_TPCSC': 'RTI_TPCSC.txt',
+                    'Homeless_Foster_ASD': 'Homeless_Foster_ASD.txt',
+                    'Homeless_Foster_BLF': 'Homeless_Foster_BLF.txt'
+                    }
 
 
 sftp_conn_iota_export = SFTPConnection(
@@ -36,7 +42,7 @@ sftp_conn_iota_export = SFTPConnection(
 SFTP_conn_file_exchange(sftp_conn_iota_export,
                         import_or_export = 'export',
                         sftp_folder_name='file_transfers/local_iota_file_transfer', 
-                        db='powerschool_staged',
+                        db='powerschool_imports',
                         naming_dict = iota_dictionary,
                         use_pool=False
                         )
