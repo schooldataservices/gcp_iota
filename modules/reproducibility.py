@@ -26,8 +26,8 @@ def read_file(file_path):
 
 def pre_processing(df):
         
-        df = df.fillna('')
-        df = df.astype(str)
+        # df = df.fillna('')
+        # df = df.astype(str)
         df.columns = [col.replace('.', '_') for col in df.columns]
 
         return(df)

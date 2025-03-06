@@ -39,4 +39,5 @@ def main(SFTP_folder_name):
     instance.process()# Pass SFTP files into Bucket & then into Big Query tables
 
 main("misc_imports")
+main("EIS")
 logging.info('Process has reached the end\n\n')

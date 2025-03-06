@@ -42,16 +42,9 @@ def main(SFTP_folder_name):
 directory_path_blf = r'S:\SFTP\powerschool_tpcsc'
 directory_path_asd = r'S:\SFTP\powerschool'
 output_directory = r'S:\SFTP\powerschool_combined'
-concat_files_from_directories(directory_path_blf, directory_path_asd, output_directory)
+concat_files_from_directories(directory_path_asd, directory_path_blf, output_directory)
 
 main("powerschool_combined")
 main("EIS")
 logging.info('Process has reached the end\n\n')
 
-#Fix indentation of the logs
-#Implement new SFTP module
-
-#Remove this from being tracking
-# Remove pycache
-# sftp_operations_folder/file_transfers/local_iota_file_transfer
-# bigquery_operations/output.txt
