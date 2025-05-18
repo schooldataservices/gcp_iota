@@ -1,17 +1,20 @@
 import pandas as pd
-import os 
-import sys
-
+import logging
 
 
 def read_file(file_path):
 
     # Get the file extension
     file_extension = file_path.split('.')[-1].lower()
+    
 
     # Read the file based on its extension
     if file_extension == 'csv':
-        df = pd.read_csv(file_path, low_memory=False)
+        try:
+            df = pd.read_csv(file_path, low_memory=False)
+        except UnicodeDecodeError:
+            df = pd.read_csv(file_path, sep=None, encoding='utf-16') #issue with some excel files coming across with utf-16 and tab delimiter
+
     elif file_extension == 'xlsx' or file_extension == 'xls':
         df = pd.read_excel(file_path, low_memory=False)
     elif file_extension == 'json':
@@ -26,9 +29,13 @@ def read_file(file_path):
 
 def pre_processing(df):
         
-        # df = df.fillna('')
-        # df = df.astype(str)
         df.columns = [col.replace('.', '_') for col in df.columns]
+
+        # Drop rows where all columns have NaN values
+        df = df.dropna(how='all')
+
+        # Reset the index
+        df = df.reset_index(drop=True)
 
         return(df)
 
