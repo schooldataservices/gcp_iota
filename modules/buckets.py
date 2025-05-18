@@ -165,7 +165,7 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, 
 
     # Generate BigQuery schema from DataFrame dtypes
     bq_schema = map_column_types(df, dtype_mapping)
-    print(f'Here is the BQ schema {bq_schema}')
+    # print(f'Here is the BQ schema {bq_schema}')
 
 
 
