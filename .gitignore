@@ -9,3 +9,4 @@ SFTP_folders
 file_transfers/
 __pycache__
 sftp_operations_folder/file_transfers/local_iota_file_transfer
+*.ipynb
