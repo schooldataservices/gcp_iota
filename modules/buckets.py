@@ -122,8 +122,8 @@ def upload_to_bq_table(cloud_storage_uri, project_id, db, table_name, location, 
   
     # Read the CSV file from Cloud Storage into a Pandas DataFrame
     try:
-        df = read_file(cloud_storage_uri) #here is where the error is occuring 'gs://eisbucket-iotaschools-1/EIS_prior_schools.csv'
-        df = pre_processing(df) #Prior to this pre-processing was turning everything into a string
+        df = read_file_comprehensive(cloud_storage_uri) 
+        df = pre_processing(df) 
         
 
     except pd.errors.ParserError as e:
