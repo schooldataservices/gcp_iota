@@ -46,6 +46,5 @@ df[columns_to_replace] = df[columns_to_replace].replace(replacement_dict).astype
 df.to_csv(r'S:\SFTP\test_scores\iReady_ByYear_PriorYrs.csv', index=False)
 
 main("misc_imports")
-# main("EIS")
 main("test_scores")
 logging.info('Process has reached the end\n\n')

@@ -25,6 +25,9 @@ with open('../powerschool-420113-db919282054b.json') as json_file:
     otus_sftp_host = j['otus_sftp_host']
     otus_sftp_username = j['otus_sftp_username']
     otus_sftp_password =  j['otus_sftp_password']
+    hero_sftp_host = j['hero_sftp_host']
+    hero_sftp_username = j['hero_sftp_username']
+    hero_sftp_password = j['hero_sftp_password']
 
 
 
@@ -60,6 +63,11 @@ otus_dictionary = {
                     'OTUS_Attendance_Discipline' : 'OTUS_Attendance_Discipline.csv'
                     }
 
+hero_dictionary = {
+                    'Hero_Faculty' : 'Faculty.csv',
+                    'Hero_StudentDemographics' : 'StudentDemographics.csv',
+                    'Hero_StudentSchedules' : 'StudentSchedules.csv',
+}
 # ----------------------------------Clever-----------------------------------------------
 
 sftp_conn_clever_export = SFTPConnection(
@@ -155,12 +163,38 @@ SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\savva_iota_fil
                remote_dir='/SIS',  #root dir on clevers sftp
                sftp = sftp_conn_savva)
 
+# ---------------------------Hero piece-----------------------------------
+
+sftp_conn_hero = SFTPConnection(
+    host=hero_sftp_host,
+    username=hero_sftp_username,
+    password=hero_sftp_password,
+    port=2022, #Hero uses a non standard port for SFTP
+    use_pool=False
+)
+
+
+#Export replicates BQ views to local dir. Follow naming convention as dictionary arg. 
+SFTP_conn_file_exchange(sftp_conn_hero,
+                        import_or_export = 'export',
+                        sftp_folder_name='file_transfers\hero_iota_file_transfer', 
+                        db='roster_files',
+                        naming_dict = hero_dictionary,
+                        use_pool=False
+                        )
+
+#Sends local files over the HERO sftp SIS folder
+SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\hero_iota_file_transfer',
+               remote_dir='/imports',  #root dir on clevers sftp
+               sftp = sftp_conn_hero)
+
 
 
 sftp_conn_clever_export.close_all_connections()
 sftp_conn_savva.close_all_connections()
 sftp_conn_ellevation_export.close_all_connections()
 sftp_conn_otus_export.close_all_connections()
+sftp_conn_hero.close_all_connections()
 logging.info('Process has reached the end')
 
 

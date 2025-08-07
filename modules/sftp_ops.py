@@ -19,10 +19,11 @@ class SFTPConnection:
     default_cnopts = pysftp.CnOpts()
     default_cnopts.hostkeys = None
 
-    def __init__(self, host, username, password, max_connections=5, use_pool=True, cnopts=None):
+    def __init__(self, host, username, password, port=22, max_connections=5, use_pool=True, cnopts=None):
         self.host = host
         self.username = username
         self.password = password
+        self.port = port  # Add port to the instance
         self.max_connections = max_connections
         self.use_pool = use_pool
         self.cnopts = cnopts or self.default_cnopts
@@ -43,6 +44,7 @@ class SFTPConnection:
             host=self.host,
             username=self.username,
             password=self.password,
+            port=self.port,  # Use the port here
             cnopts=self.cnopts
         )
 
