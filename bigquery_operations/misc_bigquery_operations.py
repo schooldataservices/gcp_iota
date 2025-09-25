@@ -38,13 +38,6 @@ def main(SFTP_folder_name):
     
     instance.process()# Pass SFTP files into Bucket & then into Big Query tables
 
-#This must be done to fix the improper dtype mix. Not sure where this file originates from in order to get into the SFTP. 
-df = pd.read_csv(r'S:\SFTP\test_scores\iReady_ByYear_PriorYrs.csv')
-columns_to_replace = ['met_typical', 'met_stretch'] # Define the columns and the replacement dictionary. Apply the replacement to multiple columns
-replacement_dict = {'True': 1, 'False': 0}
-df[columns_to_replace] = df[columns_to_replace].replace(replacement_dict).astype('Int64')
-df.to_csv(r'S:\SFTP\test_scores\iReady_ByYear_PriorYrs.csv', index=False)
-
 main("misc_imports")
 main("test_scores")
 logging.info('Process has reached the end\n\n')

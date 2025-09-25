@@ -211,6 +211,9 @@ def SFTP_export_dir_to_SFTP(local_dir, remote_dir, sftp):
     conn = sftp._create_new_connection()
     logging.info('\n\nSFTP singular connection established successfully')
 
+    logging.info(f'Local dir: {local_dir}')
+    logging.info(f'Remote dir: {remote_dir}')
+
     for root, _, files in os.walk(local_dir):
         for file in files:
             local_path = os.path.join(root, file)
@@ -284,3 +287,19 @@ def copy_newest_savvas_files(source_dir, target_dir, file_prefixes):
         logging.info(f"Copied '{newest_file}' to '{new_file_path}'.")
 
 
+def add_quotes_to_column_names(directory_path):
+    for filename in os.listdir(directory_path):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(directory_path, filename)
+            try:
+                # Read the CSV file
+                df = pd.read_csv(file_path)
+                
+                # Add quotes around column names
+                df.columns = ['"' + col + '"' for col in df.columns]
+                
+                # Save the file back to the same location
+                df.to_csv(file_path, index=False)
+                logging.info(f"Processed: {filename}")
+            except Exception as e:
+                logging.error(f"Error processing {filename}: {e}")

@@ -28,6 +28,9 @@ with open('../powerschool-420113-db919282054b.json') as json_file:
     hero_sftp_host = j['hero_sftp_host']
     hero_sftp_username = j['hero_sftp_username']
     hero_sftp_password = j['hero_sftp_password']
+    ais_sftp_username = j['ais_sftp_username']
+    ais_sftp_password = j['ais_sftp_password']
+    ais_sftp_host = j['ais_sftp_host']
 
 
 
@@ -67,6 +70,12 @@ hero_dictionary = {
                     'Hero_Faculty' : 'Faculty.csv',
                     'Hero_StudentDemographics' : 'StudentDemographics.csv',
                     'Hero_StudentSchedules' : 'StudentSchedules.csv',
+}
+
+ais_dictionary = {
+    'AIS_DailyAttendance': 'AIS_DailyAttendance.csv',
+    'AIS_PeriodAttendance': 'AIS_PeriodAttendance.csv',
+    'AIS_Guardians': 'AIS_Guardians.csv'
 }
 # ----------------------------------Clever-----------------------------------------------
 
@@ -188,6 +197,32 @@ SFTP_export_dir_to_SFTP(local_dir=os.getcwd() + '\\file_transfers\hero_iota_file
                remote_dir='/imports',  #root dir on clevers sftp
                sftp = sftp_conn_hero)
 
+# ----------------------------AIS-------------------------------
+sftp_conn_ais = SFTPConnection(
+    host=ais_sftp_host,
+    username=ais_sftp_username,
+    password=ais_sftp_password,
+    use_pool=False
+)
+
+#Export replicates BQ views to local dir. Follow naming convention as dictionary arg. 
+SFTP_conn_file_exchange(sftp_conn_ais,
+                        import_or_export = 'export',
+                        sftp_folder_name=r'file_transfers\ais_iota_file_transfer', 
+                        db='roster_files',
+                        naming_dict = ais_dictionary,
+                        use_pool=False
+                        )
+
+#Change the fields in AIS files to have quotes around column names. Reqs of AIS
+directory_path = os.path.join(os.getcwd(), 'file_transfers', 'ais_iota_file_transfer')
+print(os.listdir(directory_path))
+add_quotes_to_column_names(directory_path)
+
+
+SFTP_export_dir_to_SFTP(local_dir=directory_path,
+               remote_dir='/prod2-sftp-s3-uploads/green_dot',  
+               sftp = sftp_conn_ais)
 
 
 sftp_conn_clever_export.close_all_connections()
@@ -195,6 +230,7 @@ sftp_conn_savva.close_all_connections()
 sftp_conn_ellevation_export.close_all_connections()
 sftp_conn_otus_export.close_all_connections()
 sftp_conn_hero.close_all_connections()
+sftp_conn_ais.close_all_connections()
 logging.info('Process has reached the end')
 
 
